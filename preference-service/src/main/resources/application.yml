@@ -2,4 +2,19 @@ spring:
   application:
     name: preference-service
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      fail-fast: false
+    # Local fallback for Kafka if config-server is down
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  # Local fallback for Datasource
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:8843}/preference_db
+    username: ${DB_USERNAME:pcm}
+    password: ${DB_PASSWORD:pcm_dev_password}
+    driver-class-name: org.postgresql.Driver

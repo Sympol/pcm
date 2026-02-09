@@ -1,5 +1,6 @@
 package dev.vibeafrika.pcm.profile.infrastructure.security;
 
+import dev.vibeafrika.pcm.common.security.PiiProtectionProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.vault.core.VaultOperations;
@@ -11,7 +12,7 @@ import org.springframework.vault.support.Plaintext;
  * Provides transparent encryption and decryption for sensitive user data.
  */
 @Service
-public class VaultTransitService {
+public class VaultTransitService implements PiiProtectionProvider {
 
     private final VaultOperations vaultOperations;
     private final String piiKeyName;

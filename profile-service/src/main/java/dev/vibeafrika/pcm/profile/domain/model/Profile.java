@@ -5,11 +5,11 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -45,8 +45,8 @@ public class Profile {
     @Embedded
     private Handle handle;
 
-    @Type(JsonBinaryType.class)
-    @Column(name = "attributes", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "attributes")
     private Map<String, Object> attributes = new HashMap<>();
 
     @CreatedDate

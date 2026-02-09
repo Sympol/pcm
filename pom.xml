@@ -31,34 +31,36 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Framework Versions -->
-        <spring-boot.version>3.2.1</spring-boot.version>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <spring-boot.version>3.3.2</spring-boot.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
 
 
         <!-- Database -->
         <postgresql.version>42.7.7</postgresql.version>
-        <flyway.version>10.4.1</flyway.version>
-        <hibernate.version>6.4.1.Final</hibernate.version>
+        <flyway.version>10.11.1</flyway.version>
+        <hibernate.version>6.4.4.Final</hibernate.version>
 
         <!-- Messaging -->
-        <kafka.version>3.9.1</kafka.version>
+        <kafka.version>3.7.1</kafka.version>
         <avro.version>1.11.4</avro.version>
         <confluent.version>7.6.1</confluent.version>
 
         <!-- Search & Cache -->
-        <elasticsearch.version>8.11.3</elasticsearch.version>
+        <elasticsearch.version>8.13.4</elasticsearch.version>
         <redis.version>3.2.1</redis.version>
 
         <!-- Security & Vault -->
-        <bouncycastle.version>1.77</bouncycastle.version>
+        <bouncycastle.version>1.78</bouncycastle.version>
 
         <!-- gRPC -->
         <grpc.version>1.60.1</grpc.version>
         <protobuf.version>4.28.2</protobuf.version>
+        <grpc-spring-boot-starter.version>3.1.0.RELEASE</grpc-spring-boot-starter.version>
 
         <!-- Observability -->
         <micrometer.version>1.12.1</micrometer.version>
         <opentelemetry.version>1.34.1</opentelemetry.version>
+        <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
 
         <!-- Testing -->
         <junit.version>5.10.1</junit.version>
@@ -142,6 +144,16 @@
                 <version>${confluent.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-stream-binder-kafka</artifactId>
+                <version>4.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
+                <version>4.1.0</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.avro</groupId>
                 <artifactId>avro</artifactId>
                 <version>${avro.version}</version>
@@ -190,6 +202,16 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bridge-otel</artifactId>
+                <version>1.2.2</version> <!-- Version compatible with OTel 1.34 -->
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-exporter-otlp</artifactId>
+                <version>${opentelemetry.version}</version>
+            </dependency>
 
             <!-- Testing -->
             <dependency>
@@ -211,6 +233,52 @@
                 <artifactId>rest-assured</artifactId>
                 <version>${rest-assured.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <!-- Transitive Dependencies Management -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.14.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.8.0</version>
+            </dependency>
+
+            <!-- Forced Transitive Dependency Upgrades (Security) -->
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>3.25.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.26.1</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.16.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>4.1.111.Final</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>1.5.6</version>
+            </dependency>
+            <dependency>
+                <groupId>net.minidev</groupId>
+                <artifactId>json-smart</artifactId>
+                <version>2.5.1</version> <!-- Ensuring fixed version -->
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -333,7 +401,6 @@
                     </executions>
                 </plugin>
 
-                <!-- Avro -->
                 <plugin>
                     <groupId>org.apache.avro</groupId>
                     <artifactId>avro-maven-plugin</artifactId>
@@ -346,6 +413,25 @@
                             </goals>
                         </execution>
                     </executions>
+                </plugin>
+
+                <!-- Dependency Monitoring -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>versions-maven-plugin</artifactId>
+                    <version>2.16.2</version>
+                    <configuration>
+                        <generateBackupPoms>false</generateBackupPoms>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <version>9.0.9</version>
+                    <configuration>
+                        <failBuildOnCVSS>7</failBuildOnCVSS>
+                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -253,16 +253,27 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: pcm-jaeger
     ports:
-      - "5775:5775/udp"
-      - "6831:6831/udp"
-      - "6832:6832/udp"
-      - "5778:5778"
-      - "16686:16686"
-      - "14268:14268"
-      - "14250:14250"
-      - "9411:9411"
-    environment:
-      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+      - "16686:16686" # UI
+      - "4317:4317"  # OTLP gRPC (internal collector)
+      - "4318:4318"  # OTLP HTTP (internal collector)
+      - "9411:9411"  # Zipkin (legacy)
+    networks:
+      - pcm-network
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: pcm-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./docker/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8888:8888" # Metrics
+    depends_on:
+      - jaeger
+      - prometheus
     networks:
       - pcm-network
 
@@ -285,6 +296,24 @@ services:
       - ./docker/keycloak/pcm-realm.json:/opt/keycloak/data/import/pcm-realm.json
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pcm-network
+
+  # RabbitMQ - Alternative messaging broker for portability verification
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: pcm-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
       interval: 10s
       timeout: 5s
       retries: 5
