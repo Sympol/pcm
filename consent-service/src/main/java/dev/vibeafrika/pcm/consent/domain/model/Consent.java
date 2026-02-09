@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -18,8 +20,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "consent_ledger", indexes = {
-    @Index(name = "idx_consent_profile", columnList = "profile_id, timestamp DESC"),
-    @Index(name = "idx_consent_purpose", columnList = "profile_id, purpose, timestamp DESC")
+        @Index(name = "idx_consent_profile", columnList = "profile_id, timestamp DESC"),
+        @Index(name = "idx_consent_purpose", columnList = "profile_id, purpose, timestamp DESC")
 })
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -61,12 +63,13 @@ public class Consent implements AggregateRoot<UUID> {
     @Column(name = "proof_hash", nullable = false, length = 64)
     private String proofHash;
 
-    @Column(columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata")
     private String metadata;
 
-    private Consent(String tenantId, UUID profileId, ConsentPurpose purpose, boolean granted, 
-                   String version, String consentText, String ipAddress, 
-                   String userAgent, String proofHash) {
+    private Consent(String tenantId, UUID profileId, ConsentPurpose purpose, boolean granted,
+            String version, String consentText, String ipAddress,
+            String userAgent, String proofHash) {
         this.id = UUID.randomUUID();
         this.tenantId = tenantId;
         this.profileId = profileId;
@@ -79,15 +82,15 @@ public class Consent implements AggregateRoot<UUID> {
         this.proofHash = proofHash;
     }
 
-    public static Consent grant(String tenantId, UUID profileId, ConsentPurpose purpose, String version, 
-                               String consentText, String ipAddress, String userAgent, 
-                               String proofHash) {
+    public static Consent grant(String tenantId, UUID profileId, ConsentPurpose purpose, String version,
+            String consentText, String ipAddress, String userAgent,
+            String proofHash) {
         return new Consent(tenantId, profileId, purpose, true, version, consentText, ipAddress, userAgent, proofHash);
     }
 
-    public static Consent revoke(String tenantId, UUID profileId, ConsentPurpose purpose, String version, 
-                                String consentText, String ipAddress, String userAgent, 
-                                String proofHash) {
+    public static Consent revoke(String tenantId, UUID profileId, ConsentPurpose purpose, String version,
+            String consentText, String ipAddress, String userAgent,
+            String proofHash) {
         return new Consent(tenantId, profileId, purpose, false, version, consentText, ipAddress, userAgent, proofHash);
     }
 }

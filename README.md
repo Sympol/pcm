@@ -39,7 +39,8 @@ Refer to the [**Quick Start Guide**](docs/QUICKSTART.md) for detailed onboarding
 
 - ✅ **Open source** (Apache 2.0)
 - ✅ **Privacy-by-design** (Immutable consent ledger, orchestrated erasure)
-- ✅ **Cloud-native** (Kubernetes-ready, Kafka event-driven, stateless)
+- ✅ **Cloud-native** (Kubernetes-ready, OpenTelemetry-native, stateless)
+- ✅ **Infrastructure Agnostic** (Support for PostgreSQL/MySQL, Kafka/RabbitMQ)
 - ✅ **High Performance** (gRPC aggregation at the gateway layer)
 - ✅ **Compliant** with GDPR, ePrivacy, and emerging data laws
 
@@ -71,17 +72,18 @@ PCM uses **Hexagonal Architecture** with clear **bounded contexts**, standardize
 
 | Service | Responsibility | Stack |
 |---------|----------------|-------|
-| **Profile Service** | User identity, handle management, dynamic attributes | PostgreSQL (JSONB), Redis |
-| **Consent Service** | GDPR consent collection, versioning, legal proof | PostgreSQL (Ledger) |
-| **Segment Service** | User classification and real-time segmentation | Elasticsearch, Kafka |
+| **Profile Service** | User identity, handle management, dynamic attributes | PostgreSQL/MySQL (JSON), Redis |
+| **Consent Service** | GDPR consent collection, versioning, legal proof | PostgreSQL/MySQL (Ledger) |
+| **Segment Service** | User classification and real-time segmentation | Elasticsearch, Kafka/RabbitMQ |
 | **Preference Service** | UX preferences (language, theme, notifications) | Redis |
-| **Config Service** | Centralized configuration for the entire platform | Spring Cloud Config |
-| **API Gateway** | Unified entry point, JWT security, Aggregator | Spring Cloud Gateway, gRPC |
+| **Config Service** | (Optional) Centralized configuration | Spring Cloud Config |
+| **API Gateway** | Unified entry point, JWT security, Aggregator | Gateway, gRPC, OTel |
 
 ### Communication
 
 - **Synchronous**: gRPC for high-performance data aggregation (Gateway -> Services)
-- **Asynchronous**: Kafka with Avro schemas for cross-service events (e.g., GDPR Erasure)
+- **Asynchronous**: Spring Cloud Stream with support for **Kafka** (Avro) and **RabbitMQ**
+- **Observability**: **OpenTelemetry** native (TRACES & METRICS exporters)
 - **Security**: JWT for client authentication, standard OAuth2 resources server
 
 ---
@@ -109,7 +111,11 @@ pcm/
 ---
 
 ## ⚙️ Configuration
-PCM uses a centralized configuration model via **Spring Cloud Config**. All core platform settings (Kafka, Redis, Vault, Logging) are managed in the `config-service`.
+PCM uses a dual configuration model:
+1. **Centralized**: Via **Spring Cloud Config** (recommended for production).
+2. **Decentralized**: All services provide local fallbacks and can be configured entirely via **Environment Variables** (ideal for local dev or simple container deployments).
+
+Core platform settings (Messaging, Database, Vault, Logging) are standardized in the `config-service`.
 
 - **Source of truth**: `config-service/src/main/resources/config/`
 - **Shared config**: `application.yml`

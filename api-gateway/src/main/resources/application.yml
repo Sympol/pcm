@@ -2,4 +2,17 @@ spring:
   application:
     name: api-gateway
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      fail-fast: false
+    gateway:
+      routes:
+        - id: profile-service
+          uri: ${PROFILE_SERVICE_URL:http://localhost:18081}
+          predicates:
+            - Path=/api/v1/profiles/**
+        - id: consent-service
+          uri: ${CONSENT_SERVICE_URL:http://localhost:18083}
+          predicates:
+            - Path=/api/v1/consents/**

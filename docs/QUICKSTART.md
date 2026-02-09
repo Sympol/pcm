@@ -33,12 +33,14 @@ docker-compose up -d
 ```
 
 This will start:
-- **PostgreSQL**: Profile and Consent storage (Port 8843)
-- **Redis**: Caching and Preference storage (Port 6779)
-- **Kafka & Zookeeper**: Event distribution
-- **Elasticsearch**: Segmentation engine
-- **Schema Registry**: Port 8081
-- **Kafka UI**: Accessible at `http://localhost:8095`
+- **PostgreSQL/MySQL**: Storage (Port 8843)
+- **Redis**: Caching (Port 6779)
+- **Kafka**: Messaging (Port 9092)
+- **RabbitMQ**: Alternative Messaging (Port 5672)
+- **Elasticsearch**: Segmentation (Port 9200)
+- **OpenTelemetry Collector**: Observability (Port 4318)
+- **Jaeger**: Distributed Tracing (Port 16686)
+- **Kafka UI**: `http://localhost:8095`
 
 ## 2. Build the Platform
 
@@ -105,6 +107,8 @@ curl -H "Authorization: Bearer $TOKEN" -H "X-Tenant-Id: vibe-afrika" http://loca
 | **Consent** | 18083 | `http://localhost:18083/swagger-ui.html` |
 | **Segment** | 18084 | `http://localhost:18084/swagger-ui.html` |
 | **Config** | 8888 | `http://localhost:8888/actuator/health` |
+| **Tracing (Jaeger)** | 16686 | `http://localhost:16686/search` |
+| **Rabbit UI** | 15672 | `http://localhost:15672` |
 
 ---
 **Note**: In development mode, security is relaxed for some endpoints. In production, all requests except profile registration require a valid JWT.

@@ -6,11 +6,11 @@ CREATE TABLE consent_ledger (
     granted BOOLEAN NOT NULL,
     version VARCHAR(20) NOT NULL,
     consent_text TEXT NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ip_address VARCHAR(45),
     user_agent TEXT,
     proof_hash VARCHAR(64) NOT NULL,
-    metadata JSONB
+    metadata JSON
 );
 
 CREATE INDEX idx_consent_profile ON consent_ledger(profile_id, timestamp DESC);

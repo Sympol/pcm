@@ -19,6 +19,12 @@
     <description>Shared utilities, interfaces, and domain primitives</description>
 
     <dependencies>
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>jakarta.validation</groupId>

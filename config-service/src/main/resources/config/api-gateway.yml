@@ -30,7 +30,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8090/auth/realms/pcm}
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8090/realms/pcm} # Keycloak URL without /auth
 
 resilience4j:
   circuitbreaker:

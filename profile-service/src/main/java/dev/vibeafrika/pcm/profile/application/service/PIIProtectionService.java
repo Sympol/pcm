@@ -1,6 +1,6 @@
 package dev.vibeafrika.pcm.profile.application.service;
 
-import dev.vibeafrika.pcm.profile.infrastructure.security.VaultTransitService;
+import dev.vibeafrika.pcm.common.security.PiiProtectionProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,7 @@ import java.util.Set;
 @Slf4j
 public class PIIProtectionService {
 
-    private final VaultTransitService vaultTransitService;
+    private final PiiProtectionProvider piiProtectionProvider;
 
     private static final Set<String> PII_KEYS = Set.of("email", "fullName", "phoneNumber");
 
@@ -33,7 +33,7 @@ public class PIIProtectionService {
             if (protectedAttributes.containsKey(key)) {
                 Object value = protectedAttributes.get(key);
                 if (value instanceof String plaintext) {
-                    String encrypted = vaultTransitService.encrypt(plaintext);
+                    String encrypted = piiProtectionProvider.encrypt(plaintext);
                     log.info("Key {}: plaintext encrypted successfully", key);
                     protectedAttributes.put(key, encrypted);
                 }
@@ -54,7 +54,7 @@ public class PIIProtectionService {
             if (unprotectedAttributes.containsKey(key)) {
                 Object value = unprotectedAttributes.get(key);
                 if (value instanceof String ciphertext) {
-                    String decrypted = vaultTransitService.decrypt(ciphertext);
+                    String decrypted = piiProtectionProvider.decrypt(ciphertext);
                     log.info("Key {}: ciphertext decrypted successfully", key);
                     unprotectedAttributes.put(key, decrypted);
                 }
