@@ -10,9 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      # Optional: In the future, we can add PostgreSQL/Kafka for integration tests
-      # For now, we focus on compilation and unit tests
 
     steps:
     - uses: actions/checkout@v4
