@@ -2,22 +2,17 @@
 
 ## Supported Versions
 
-We currently provide security updates for the following versions:
+The following versions of PCM are currently being supported with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
 | 0.1.x   | :white_check_mark: |
-| < 0.1.0 | :x:                |
+| < 0.1   | :x:                |
 
 ## Reporting a Vulnerability
 
-We take the security of PCM seriously. If you believe you have found a security vulnerability, please do NOT report it publicly in the issue tracker.
+We take the security of PCM seriously. If you believe you have found a security vulnerability, please report it to us by emailing [EMAIL_ADDRESS].
 
-Instead, please send an email to **security@vibe-afrika.dev**.
+Please do **not** open a public GitHub issue for security vulnerabilities.
 
-Please include:
-- A description of the vulnerability.
-- Steps to reproduce the issue.
-- Potential impact.
-
-We will acknowledge your report within 48 hours and provide a timeline for a fix. We follow a responsible disclosure policy.
+After you report a vulnerability, we will acknowledge your email within 48 hours and provide a timeline for a fix. We follow a responsible disclosure policy and ask that you give us reasonable time to fix the issue before making it public.

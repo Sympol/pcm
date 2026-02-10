@@ -9,6 +9,8 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green.svg)](https://spring.io/projects/spring-boot)
+[![CI/CD](https://github.com/vibe-afrika/pcm/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/vibe-afrika/pcm/actions/workflows/ci-cd.yml)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen.svg)](SECURITY.md)
 
 ---
 
