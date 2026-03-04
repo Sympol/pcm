@@ -1,0 +1,40 @@
+{
+  "namespace": "dev.vibeafrika.pcm.events",
+  "type": "record",
+  "name": "SensitiveDataAccessEvent",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string"
+    },
+    {
+      "name": "tenantId",
+      "type": "string"
+    },
+    {
+      "name": "userId",
+      "type": ["null", "string"],
+      "default": null
+    },
+    {
+      "name": "action",
+      "type": "string",
+      "doc": "e.g., DECRYPT, VIEW, EXPORT"
+    },
+    {
+      "name": "resource",
+      "type": "string",
+      "doc": "e.g., PROFILE_PII, BANK_DETAILS"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    },
+    {
+      "name": "metadata",
+      "type": ["null", "string"],
+      "default": null
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="asserts/pcm_by_qwenai_logo.png" width="400" alt="PCM Logo">
+  <img src="assets/pcm_by_qwenai_logo.png" width="400" alt="PCM Logo">
 </p>
 
 # PCM - Profile & Consent Manager
 
-> **An open-source, privacy-first identity & consent platform for modern social applications**
+> **An privacy-first identity & consent platform for modern social applications**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
@@ -18,7 +18,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/vibe-afrika/pcm.git
+git clone https://github.com/Sympol/pcm.git
 cd pcm
 
 # Start infrastructure (PostgreSQL, Redis, Kafka, Elasticsearch)

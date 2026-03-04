@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.vibe-afrika</groupId>
+        <artifactId>preference-context</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>preference-domain</artifactId>
+    <name>PCM - Preference Domain</name>
+    <description>Preference bounded context - Domain layer (framework-agnostic)</description>
+
+    <dependencies>
+        <!-- Shared domain concepts (optional) -->
+        <dependency>
+            <groupId>dev.vibe-afrika</groupId>
+            <artifactId>pcm-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Pure Assert - ONLY allowed domain dependency -->
+        <dependency>
+            <groupId>io.github.sympol</groupId>
+            <artifactId>pure-assert</artifactId>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.jqwik</groupId>
+            <artifactId>jqwik</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Enforce zero framework dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-no-framework-deps</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <!-- Ban all dependencies by default -->
+                                        <exclude>*:*</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <!-- Test dependencies allowed -->
+                                        <include>*:*:*:*:test</include>
+                                        <!-- Explicitly allow pure-assert (zero transitive deps) -->
+                                        <include>io.github.sympol:pure-assert</include>
+                                        <!-- Allow pcm-domain (shared domain concepts) -->
+                                        <include>dev.vibe-afrika:pcm-domain</include>
+                                    </includes>
+                                    <message>Domain modules must have ZERO framework dependencies (except pure-assert for validation)</message>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

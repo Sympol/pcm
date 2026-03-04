@@ -1,5 +1,142 @@
 
 services:
+  # Config Service - Centralized configuration
+  config-service:
+    build: ./config-service
+    image: pcm-config-service:latest
+    container_name: pcm-config-service
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pcm-network
+
+  # Profile Service
+  profile-service:
+    build: ./profile-service
+    image: pcm-profile-service:latest
+    container_name: pcm-profile-service
+    ports:
+      - "18081:18081"
+      - "19091:19091"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - CONFIG_SERVICE_URL=http://config-service:8888
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USERNAME=pcm
+      - DB_PASSWORD=pcm_dev_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - pcm-network
+
+  # Preference Service
+  preference-service:
+    build: ./preference-service
+    image: pcm-preference-service:latest
+    container_name: pcm-preference-service
+    ports:
+      - "18082:18082"
+      - "19092:19092"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - CONFIG_SERVICE_URL=http://config-service:8888
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - pcm-network
+
+  # Consent Service
+  consent-service:
+    build: ./consent-service
+    image: pcm-consent-service:latest
+    container_name: pcm-consent-service
+    ports:
+      - "18083:18083"
+      - "19093:19093"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - CONFIG_SERVICE_URL=http://config-service:8888
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USERNAME=pcm
+      - DB_PASSWORD=pcm_dev_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - pcm-network
+
+  # Segment Service
+  segment-service:
+    build: ./segment-service
+    image: pcm-segment-service:latest
+    container_name: pcm-segment-service
+    ports:
+      - "18084:18084"
+      - "19094:19094"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - CONFIG_SERVICE_URL=http://config-service:8888
+      - ELASTICSEARCH_URIS=http://elasticsearch:9200
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - pcm-network
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    image: pcm-api-gateway:latest
+    container_name: pcm-api-gateway
+    ports:
+      - "8080:9880"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - CONFIG_SERVICE_URL=http://config-service:8888
+      - PROFILE_SERVICE_URL=http://profile-service:18081
+      - CONSENT_SERVICE_URL=http://consent-service:18083
+      - JWT_ISSUER_URI=http://keycloak:8080/realms/pcm
+    depends_on:
+      config-service:
+        condition: service_healthy
+      profile-service:
+        condition: service_started
+      consent-service:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    networks:
+      - pcm-network
+
   # PostgreSQL - Main database for Profile and Consent services
   postgresql:
     image: postgres:15-alpine
@@ -317,6 +454,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - pcm-network
+
+  audit-service:
+    build: ./audit-service
+    image: pcm-audit-service:latest
+    container_name: pcm-audit-service
+    ports:
+      - "18085:18085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - CONFIG_SERVICE_URL=http://config-service:8888
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - DB_USERNAME=pcm
+      - DB_PASSWORD=pcm_dev_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - pcm-network
 

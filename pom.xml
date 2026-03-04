@@ -67,6 +67,14 @@
         <testcontainers.version>1.19.3</testcontainers.version>
         <rest-assured.version>5.4.0</rest-assured.version>
         <mockito.version>5.8.0</mockito.version>
+        <jqwik.version>1.8.2</jqwik.version>
+
+        <!-- IAB TCF -->
+        <iabtcf-decoder.version>2.0.10</iabtcf-decoder.version>
+        <iabtcf-encoder.version>2.0.10</iabtcf-encoder.version>
+
+        <!-- Domain Validation -->
+        <pure-assert.version>1.0.0</pure-assert.version>
 
         <!-- Plugins -->
         <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
@@ -81,16 +89,19 @@
         <module>libs/common</module>
         <module>libs/kafka-events</module>
         <module>libs/grpc-contracts</module>
+        <module>libs/iab-models</module>
 
-        <!-- Infrastructure Support -->
-        <module>config-service</module>
-        <module>api-gateway</module>
+        <!-- PCM Modular Monolith - Shared Domain -->
+        <module>pcm-domain</module>
 
-        <!-- Spring Boot Services -->
-        <module>profile-service</module>
-        <module>consent-service</module>
-        <module>segment-service</module>
-        <module>preference-service</module>
+        <!-- PCM Modular Monolith - Bounded Contexts -->
+        <module>preference-context</module>
+        <module>segment-context</module>
+        <module>profile-context</module>
+        <module>consent-context</module>
+
+        <!-- Unified Infrastructure -->
+        <module>pcm-infrastructure-spring</module>
     </modules>
 
     <dependencyManagement>
@@ -232,6 +243,39 @@
                 <groupId>io.rest-assured</groupId>
                 <artifactId>rest-assured</artifactId>
                 <version>${rest-assured.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>net.jqwik</groupId>
+                <artifactId>jqwik</artifactId>
+                <version>${jqwik.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- IAB TCF -->
+            <dependency>
+                <groupId>com.iabtcf</groupId>
+                <artifactId>iabtcf-decoder</artifactId>
+                <version>${iabtcf-decoder.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.iabtcf</groupId>
+                <artifactId>iabtcf-encoder</artifactId>
+                <version>${iabtcf-encoder.version}</version>
+            </dependency>
+
+            <!-- Pure Assert - Domain Validation -->
+            <dependency>
+                <groupId>io.github.sympol</groupId>
+                <artifactId>pure-assert</artifactId>
+                <version>${pure-assert.version}</version>
+            </dependency>
+
+            <!-- ArchUnit - Architecture Testing -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>1.2.1</version>
                 <scope>test</scope>
             </dependency>
 
@@ -433,6 +477,13 @@
                         <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
                     </configuration>
                 </plugin>
+
+                <!-- Maven Enforcer Plugin -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>3.4.1</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -443,5 +494,36 @@
             <url>https://packages.confluent.io/maven/</url>
         </repository>
     </repositories>
+
+    <profiles>
+        <!-- Build profiles for framework-specific infrastructure modules -->
+        <profile>
+            <id>spring-boot</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <!-- Unified Spring Boot infrastructure for all contexts -->
+                <module>pcm-infrastructure-spring</module>
+            </modules>
+        </profile>
+
+        <profile>
+            <id>quarkus</id>
+            <modules>
+                <!-- Quarkus infrastructure (to be implemented) -->
+                <!-- <module>pcm-infrastructure-quarkus</module> -->
+            </modules>
+        </profile>
+
+        <profile>
+            <id>all</id>
+            <modules>
+                <!-- All infrastructure modules -->
+                <module>pcm-infrastructure-spring</module>
+                <!-- <module>pcm-infrastructure-quarkus</module> -->
+            </modules>
+        </profile>
+    </profiles>
 
 </project>

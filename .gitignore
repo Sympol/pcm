@@ -37,3 +37,8 @@ ryuk.log
 .env
 .env.local
 docker/data/
+
+/.*
+!/.git/
+!/.github/
+.idea

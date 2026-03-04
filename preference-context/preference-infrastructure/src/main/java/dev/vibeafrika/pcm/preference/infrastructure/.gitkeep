@@ -1,0 +1,3 @@
+# Placeholder for preference infrastructure components
+# This module contains framework-specific implementations for the preference bounded context
+# Used by the unified pcm-infrastructure-spring module
