@@ -14,7 +14,6 @@ import static org.assertj.core.api.Assertions.*;
 /**
  * Property-based test for Preference domain entity invariants.
  * 
- * **Validates: Requirements 2.6, 8.7, 18.2**
  * 
  * Feature: framework-agnostic-domain, Property 3: Domain Entities Enforce Invariants
  * 

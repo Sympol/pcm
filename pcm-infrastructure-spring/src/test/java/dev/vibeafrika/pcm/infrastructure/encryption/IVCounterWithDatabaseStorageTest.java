@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * This test verifies that the IVCounter works correctly with the database-backed
  * storage implementation, ensuring counter state persistence across restarts.
  * 
- * Requirements: 1.8
  */
 class IVCounterWithDatabaseStorageTest {
 

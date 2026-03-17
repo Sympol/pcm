@@ -23,7 +23,6 @@ import static org.mockito.Mockito.*;
  * Unit tests for DatabaseIVCounterStorage.
  * 
  * Tests database-backed persistence of IV counter state using mocked repository.
- * Requirements: 1.8
  */
 @ExtendWith(MockitoExtension.class)
 class DatabaseIVCounterStorageTest {

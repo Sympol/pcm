@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CiphertextFormatPropertyTest {
 
     /**
-     * **Validates: Requirements 26.1**
      * 
      * Property 44: Ciphertext Format Specification
      * 
