@@ -23,18 +23,16 @@ import java.time.Instant;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final String PROBLEM_BASE_URL = "https://api.pcm.vibeafrika.dev/problems";
+    private static final String PROBLEM_BASE_URL = "http://localhost/problems";
 
     // ========== Preference Context Exceptions ==========
 
     @ExceptionHandler(PreferenceNotFoundException.class)
     public ProblemDetail handlePreferenceNotFound(PreferenceNotFoundException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.NOT_FOUND,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/preference-not-found"));
         problemDetail.setTitle("Preference Not Found");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("preferenceId", ex.getPreferenceId().getValue());
         return problemDetail;
@@ -42,24 +40,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PreferenceDeletedException.class)
     public ProblemDetail handlePreferenceDeleted(PreferenceDeletedException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.GONE,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/preference-deleted"));
         problemDetail.setTitle("Preference Deleted");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
 
     @ExceptionHandler(PreferenceValidationException.class)
     public ProblemDetail handlePreferenceValidation(PreferenceValidationException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/preference-validation-error"));
         problemDetail.setTitle("Preference Validation Error");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
@@ -68,12 +62,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProfileNotFoundException.class)
     public ProblemDetail handleProfileNotFound(ProfileNotFoundException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.NOT_FOUND,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/profile-not-found"));
         problemDetail.setTitle("Profile Not Found");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("profileId", ex.getProfileId().getValue());
         return problemDetail;
@@ -81,24 +73,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProfileDeletedException.class)
     public ProblemDetail handleProfileDeleted(ProfileDeletedException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.GONE,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/profile-deleted"));
         problemDetail.setTitle("Profile Deleted");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
 
     @ExceptionHandler(InvalidHandleException.class)
     public ProblemDetail handleInvalidHandle(InvalidHandleException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/invalid-handle"));
         problemDetail.setTitle("Invalid Handle");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
@@ -107,24 +95,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConsentNotFoundException.class)
     public ProblemDetail handleConsentNotFound(ConsentNotFoundException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.NOT_FOUND,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/consent-not-found"));
         problemDetail.setTitle("Consent Not Found");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
 
     @ExceptionHandler(ConsentRevokedException.class)
     public ProblemDetail handleConsentRevoked(ConsentRevokedException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.GONE,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/consent-revoked"));
         problemDetail.setTitle("Consent Revoked");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
@@ -133,12 +117,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SegmentNotFoundException.class)
     public ProblemDetail handleSegmentNotFound(SegmentNotFoundException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.NOT_FOUND,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/segment-not-found"));
         problemDetail.setTitle("Segment Not Found");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
@@ -150,12 +132,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MissingMandatoryValueException.class)
     public ProblemDetail handleMissingMandatoryValue(MissingMandatoryValueException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/validation-error"));
         problemDetail.setTitle("Validation Error: Missing Mandatory Value");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("field", ex.field());
         problemDetail.setProperty("errorType", ex.type().name());
@@ -168,21 +148,19 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(AssertionException.class)
     public ProblemDetail handleAssertionException(AssertionException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            ex.getMessage()
-        );
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/validation-error"));
         problemDetail.setTitle("Validation Error: " + ex.type().name());
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         problemDetail.setProperty("field", ex.field());
         problemDetail.setProperty("errorType", ex.type().name());
-        
+
         // Add all parameters from the exception
         if (ex.parameters() != null && !ex.parameters().isEmpty()) {
             ex.parameters().forEach(problemDetail::setProperty);
         }
-        
+
         return problemDetail;
     }
 
@@ -191,13 +169,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex, WebRequest request) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
-        );
+            HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/internal-error"));
         problemDetail.setTitle("Internal Server Error");
+        problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
-        // Don't expose internal error details in production
         return problemDetail;
+    }
+
+    // ========== Helper ==========
+
+    private URI requestUri(WebRequest request) {
+        return URI.create(request.getDescription(false).replace("uri=", ""));
     }
 }

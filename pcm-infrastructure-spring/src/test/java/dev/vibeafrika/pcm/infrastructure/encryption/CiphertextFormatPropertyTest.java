@@ -127,8 +127,6 @@ class CiphertextFormatPropertyTest {
 
 
     /**
-     * **Validates: Requirements 26.2**
-     *
      * Property 45: Ciphertext Version Byte
      *
      * For any valid set of ciphertext components (version, algorithmId, keyId, iv, ciphertext, authTag),

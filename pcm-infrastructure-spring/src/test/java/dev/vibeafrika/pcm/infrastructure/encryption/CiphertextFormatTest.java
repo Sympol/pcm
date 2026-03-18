@@ -258,11 +258,8 @@ class CiphertextFormatTest {
         });
     }
 
-    // ========== Edge Case Tests for Task 3.4 ==========
-
     /**
      * Test parsing with multiple invalid version bytes.
-     * Requirements: 26.6
      */
     @Test
     void testParse_InvalidVersionBytes_Failure() {
@@ -296,7 +293,6 @@ class CiphertextFormatTest {
 
     /**
      * Test parsing with multiple unsupported algorithm IDs.
-     * Requirements: 26.6
      */
     @Test
     void testParse_UnsupportedAlgorithmIDs_Failure() {
@@ -330,7 +326,6 @@ class CiphertextFormatTest {
 
     /**
      * Test parsing truncated ciphertext at various positions.
-     * Requirements: 26.6
      */
     @Test
     void testParse_TruncatedAtDifferentPositions_Failure() {
@@ -391,7 +386,6 @@ class CiphertextFormatTest {
 
     /**
      * Test parsing ciphertext missing authentication tag.
-     * Requirements: 26.6
      */
     @Test
     void testParse_MissingAuthTag_Failure() {
@@ -412,7 +406,6 @@ class CiphertextFormatTest {
 
     /**
      * Test UUID big-endian serialization with edge case UUIDs.
-     * Requirements: 26.6
      */
     @Test
     void testUUIDBigEndianSerialization_EdgeCases() {
@@ -471,7 +464,6 @@ class CiphertextFormatTest {
 
     /**
      * Test parsing exactly at minimum size boundary (46 bytes).
-     * Requirements: 26.6
      */
     @Test
     void testParse_ExactlyMinimumSize_Success() {
@@ -504,7 +496,6 @@ class CiphertextFormatTest {
 
     /**
      * Test parsing null ciphertext bytes.
-     * Requirements: 26.6
      */
     @Test
     void testParse_NullBytes_Failure() {
@@ -518,7 +509,6 @@ class CiphertextFormatTest {
 
     /**
      * Test parsing with large ciphertext to ensure no size limitations.
-     * Requirements: 26.6
      */
     @Test
     void testParse_LargeCiphertext_Success() {

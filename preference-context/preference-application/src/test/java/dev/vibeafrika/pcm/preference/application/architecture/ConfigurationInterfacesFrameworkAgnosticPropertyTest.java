@@ -13,7 +13,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Property-based test for configuration interfaces being framework-agnostic.
  * 
- * **Validates: Requirements 20.2**
  * 
  * Feature: framework-agnostic-domain, Property 18: Configuration Interfaces Are Framework-Agnostic
  * 
@@ -66,7 +65,7 @@ class ConfigurationInterfacesFrameworkAgnosticPropertyTest {
             .that().resideInAPackage("..application.config..")
             .and().haveSimpleNameEndingWith("Configuration")
             .should().beInterfaces()
-            .because("Configuration contracts should be defined as interfaces (Requirement 20.2)");
+            .because("Configuration contracts should be defined as interfaces");
 
         rule.check(applicationClasses);
     }
@@ -80,7 +79,7 @@ class ConfigurationInterfacesFrameworkAgnosticPropertyTest {
                 "java..",
                 "..domain.."
             )
-            .because("Configuration interfaces should only depend on domain types (Requirement 20.2)");
+            .because("Configuration interfaces should only depend on domain types");
 
         rule.check(applicationClasses);
     }

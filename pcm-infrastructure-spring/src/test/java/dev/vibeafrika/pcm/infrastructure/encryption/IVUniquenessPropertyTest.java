@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class IVUniquenessPropertyTest {
 
     /**
-     * **Validates: Requirements 1.7**
      *
      * Property 5: IV Uniqueness
      *
@@ -55,7 +54,6 @@ class IVUniquenessPropertyTest {
     }
 
     /**
-     * **Validates: Requirements 1.7**
      *
      * Property 5 (cross-DEK variant): IVs generated for different DEKs are also unique
      * because each DEK gets its own independent random base.

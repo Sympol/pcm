@@ -41,6 +41,7 @@ public class KeyManager implements IKeyManager {
     private final DEKCache dekCache;
     private final Environment environment;
     private final SecureRandom secureRandom;
+    private final IVCounter ivCounter;
     
     // Track active DEK IDs per context
     private final Map<BoundedContext, UUID> activeDEKIds;
@@ -58,13 +59,15 @@ public class KeyManager implements IKeyManager {
      * @param auditLogger the audit logger for logging key operations
      * @param dekCache the DEK cache for performance optimization
      * @param environment the current environment (DEV, STAGING, PROD)
+     * @param ivCounter the IV counter for managing per-DEK IV state
      */
-    public KeyManager(IKMSClient kmsClient, IAuditLogger auditLogger, 
-                     DEKCache dekCache, Environment environment) {
+    public KeyManager(IKMSClient kmsClient, IAuditLogger auditLogger,
+                     DEKCache dekCache, Environment environment, IVCounter ivCounter) {
         this.kmsClient = Objects.requireNonNull(kmsClient, "KMS client cannot be null");
         this.auditLogger = Objects.requireNonNull(auditLogger, "Audit logger cannot be null");
         this.dekCache = Objects.requireNonNull(dekCache, "DEK cache cannot be null");
         this.environment = Objects.requireNonNull(environment, "Environment cannot be null");
+        this.ivCounter = Objects.requireNonNull(ivCounter, "IV counter cannot be null");
         this.secureRandom = new SecureRandom();
         this.activeDEKIds = new ConcurrentHashMap<>();
         this.kekIds = new ConcurrentHashMap<>();
@@ -236,6 +239,15 @@ public class KeyManager implements IKeyManager {
         
         // Set new DEK as active
         activeDEKIds.put(context, newDEKId);
+        
+        // Reset IV counter for the new DEK so it starts fresh
+        Result<Unit, IVCounterError> resetResult = ivCounter.resetState(newDEKId);
+        if (resetResult.isFailure()) {
+            // Log warning but don't fail the rotation — the counter will be initialized
+            // on first use via getOrInitializeState in IVCounterImpl
+            logger.warn("Failed to reset IV counter for new DEK {}: {}", newDEKId,
+                resetResult.getError().map(IVCounterError::getMessage).orElse("unknown error"));
+        }
         
         logger.info("DEK rotated for context: {}, new DEK ID: {}", context, newDEKId);
         

@@ -11,6 +11,7 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.tngtech.archunit.core.domain.JavaModifier;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
@@ -46,7 +47,7 @@ class UseCasesConstructorInjectablePropertyTest {
             .that().resideInAPackage("..application.usecase..")
             .and().haveSimpleNameEndingWith("UseCase")
             .should(haveAtLeastOnePublicConstructor())
-            .because("Use cases must be instantiable through public constructors (Requirement 13.1)");
+            .because("Use cases must be instantiable through public constructors");
 
         rule.check(applicationClasses);
     }
@@ -59,7 +60,7 @@ class UseCasesConstructorInjectablePropertyTest {
             .should().beAnnotatedWith("org.springframework.beans.factory.annotation.Autowired")
             .orShould().beAnnotatedWith("org.springframework.stereotype.Component")
             .orShould().beAnnotatedWith("org.springframework.stereotype.Service")
-            .because("Use case constructors must not use Spring annotations (Requirement 13.2)");
+            .because("Use case constructors must not use Spring annotations");
 
         rule.check(applicationClasses);
     }
@@ -71,7 +72,7 @@ class UseCasesConstructorInjectablePropertyTest {
             .and().haveSimpleNameEndingWith("UseCase")
             .should().beAnnotatedWith("jakarta.inject.Inject")
             .orShould().beAnnotatedWith("javax.inject.Inject")
-            .because("Use case constructors must not use Jakarta/CDI inject annotations (Requirement 13.2)");
+            .because("Use case constructors must not use Jakarta/CDI inject annotations");
 
         rule.check(applicationClasses);
     }
@@ -86,9 +87,10 @@ class UseCasesConstructorInjectablePropertyTest {
                 "..domain..",
                 "..application.dto..",
                 "..application.config..",
-                "..application.event.."
+                "..application.event..",
+                "..application.port.."
             )
-            .because("Use cases should only depend on domain contracts (Requirement 13.6)");
+            .because("Use cases should only depend on domain contracts");
 
         rule.check(applicationClasses);
     }
@@ -99,7 +101,7 @@ class UseCasesConstructorInjectablePropertyTest {
             .that().resideInAPackage("..application.usecase..")
             .and().haveSimpleNameEndingWith("UseCase")
             .should(beInstantiableWithoutFramework())
-            .because("Use cases must be testable without framework context (Requirement 13.6)");
+            .because("Use cases must be testable without framework context");
 
         rule.check(applicationClasses);
     }
@@ -111,7 +113,7 @@ class UseCasesConstructorInjectablePropertyTest {
             @Override
             public void check(JavaClass javaClass, ConditionEvents events) {
                 boolean hasPublicConstructor = javaClass.getConstructors().stream()
-                    .anyMatch(constructor -> constructor.getModifiers().contains(com.tngtech.archunit.core.domain.JavaModifier.PUBLIC));
+                    .anyMatch(constructor -> constructor.getModifiers().contains(JavaModifier.PUBLIC));
 
                 if (!hasPublicConstructor) {
                     String message = String.format(

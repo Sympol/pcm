@@ -404,7 +404,6 @@ class IVCounterImplTest {
 
     /**
      * Test counter state recovery after restart.
-     * Requirements: 1.8
      */
     @Test
     void testCounterStateRecovery_AfterRestart() {
@@ -448,7 +447,6 @@ class IVCounterImplTest {
 
     /**
      * Test that counter doesn't persist between 1000 intervals.
-     * Requirements: 1.8
      */
     @Test
     void testCounterPersistence_NotBetweenIntervals() {
@@ -472,7 +470,6 @@ class IVCounterImplTest {
 
     /**
      * Test overflow detection prevents further IV generation.
-     * Requirements: 1.10
      */
     @Test
     void testOverflowDetection_PreventsEncryption() {
@@ -508,7 +505,6 @@ class IVCounterImplTest {
 
     /**
      * Test counter just before overflow threshold.
-     * Requirements: 1.9
      */
     @Test
     void testCounter_JustBeforeOverflow_StillWorks() {
@@ -544,7 +540,6 @@ class IVCounterImplTest {
 
     /**
      * Test that persistence happens exactly at multiples of 1000.
-     * Requirements: 1.8
      */
     @Test
     void testPersistence_ExactlyAtMultiplesOf1000() {
