@@ -10,7 +10,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Listens to profile deletion events and automatically revokes consents for GDPR compliance.
  * Uses Spring's event mechanism for synchronous, transactional event delivery.
  */
-@Component
+@Component("consentProfileEventSubscriber")
 public class ProfileEventSubscriber {
     
     private final RevokeConsentsForProfileUseCase revokeConsentsUseCase;

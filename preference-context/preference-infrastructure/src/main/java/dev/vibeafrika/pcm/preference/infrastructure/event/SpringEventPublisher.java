@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  * Uses Spring's ApplicationEventPublisher to publish domain events.
  * Events are delivered synchronously within the same transaction.
  */
-@Component
+@Component("preferenceSpringEventPublisher")
 public class SpringEventPublisher implements EventPublisher {
     
     private final ApplicationEventPublisher applicationEventPublisher;

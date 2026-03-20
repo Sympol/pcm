@@ -18,8 +18,9 @@ public class TransactionConfiguration {
 
     /**
      * Configure transaction interceptor with rollback rules.
+     * Named 'pcmTransactionInterceptor' to avoid conflict with Spring's default transactionInterceptor.
      */
-    @Bean
+    @Bean("pcmTransactionInterceptor")
     public TransactionInterceptor transactionInterceptor(PlatformTransactionManager transactionManager) {
         TransactionInterceptor interceptor = new TransactionInterceptor();
         interceptor.setTransactionManager(transactionManager);
@@ -75,7 +76,7 @@ public class TransactionConfiguration {
             "revokeConsentsForProfileUseCase"
         );
         
-        creator.setInterceptorNames("transactionInterceptor");
+        creator.setInterceptorNames("pcmTransactionInterceptor");
         return creator;
     }
 }

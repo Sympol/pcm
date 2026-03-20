@@ -1,0 +1,12 @@
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always
+    include-exception: true
+
+logging:
+  level:
+    dev.vibeafrika.pcm: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.transaction: DEBUG

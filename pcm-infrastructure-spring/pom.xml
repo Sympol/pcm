@@ -135,6 +135,21 @@
                     <mainClass>dev.vibeafrika.pcm.infrastructure.spring.PcmApplication</mainClass>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-DDOCKER_API_VERSION=1.44</argLine>
+                    <systemPropertyVariables>
+                        <!-- Force docker-java to use API version compatible with Docker Engine 29.x -->
+                        <DOCKER_API_VERSION>1.44</DOCKER_API_VERSION>
+                    </systemPropertyVariables>
+                    <environmentVariables>
+                        <DOCKER_HOST>unix:///var/run/docker.sock</DOCKER_HOST>
+                        <DOCKER_API_VERSION>1.44</DOCKER_API_VERSION>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

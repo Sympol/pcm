@@ -11,7 +11,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Listens to profile events and triggers segment evaluation.
  * Uses Spring's event mechanism for synchronous, transactional event delivery.
  */
-@Component
+@Component("segmentProfileEventSubscriber")
 public class ProfileEventSubscriber {
     
     private final EvaluateSegmentForProfileUseCase evaluateSegmentUseCase;
