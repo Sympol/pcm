@@ -113,6 +113,26 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(InvalidConsentPurposeException.class)
+    public ProblemDetail handleInvalidConsentPurpose(InvalidConsentPurposeException ex, WebRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/invalid-consent-purpose"));
+        problemDetail.setTitle("Invalid Consent Purpose");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(TCFValidationException.class)
+    public ProblemDetail handleTCFValidation(TCFValidationException ex, WebRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/tcf-validation-error"));
+        problemDetail.setTitle("IAB TCF Validation Error");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
     // ========== Segment Context Exceptions ==========
 
     @ExceptionHandler(SegmentNotFoundException.class)
@@ -120,6 +140,29 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/segment-not-found"));
         problemDetail.setTitle("Segment Not Found");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
+        if (ex.getSegmentId() != null) {
+            problemDetail.setProperty("segmentId", ex.getSegmentId().getValue());
+        }
+        return problemDetail;
+    }
+
+    @ExceptionHandler(SegmentValidationException.class)
+    public ProblemDetail handleSegmentValidation(SegmentValidationException ex, WebRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/segment-validation-error"));
+        problemDetail.setTitle("Segment Validation Error");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(InvalidSegmentCriteriaException.class)
+    public ProblemDetail handleInvalidSegmentCriteria(InvalidSegmentCriteriaException ex, WebRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/invalid-segment-criteria"));
+        problemDetail.setTitle("Invalid Segment Criteria");
         problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;

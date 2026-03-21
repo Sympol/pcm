@@ -1,9 +1,7 @@
 package dev.vibeafrika.pcm.consent.infrastructure.config;
 
 import dev.vibeafrika.pcm.consent.application.port.EventPublisher;
-import dev.vibeafrika.pcm.consent.application.usecase.GrantConsentUseCase;
-import dev.vibeafrika.pcm.consent.application.usecase.RevokeConsentUseCase;
-import dev.vibeafrika.pcm.consent.application.usecase.RevokeConsentsForProfileUseCase;
+import dev.vibeafrika.pcm.consent.application.usecase.*;
 import dev.vibeafrika.pcm.consent.domain.repository.ConsentRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,10 +13,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ConsentUseCaseConfiguration {
 
-    /**
-     * Configure GrantConsentUseCase bean.
-     * Wires the consent repository and event publisher.
-     */
     @Bean
     public GrantConsentUseCase grantConsentUseCase(
             ConsentRepository consentRepository,
@@ -26,10 +20,6 @@ public class ConsentUseCaseConfiguration {
         return new GrantConsentUseCase(consentRepository, eventPublisher);
     }
 
-    /**
-     * Configure RevokeConsentUseCase bean.
-     * Wires the consent repository and event publisher.
-     */
     @Bean
     public RevokeConsentUseCase revokeConsentUseCase(
             ConsentRepository consentRepository,
@@ -37,11 +27,21 @@ public class ConsentUseCaseConfiguration {
         return new RevokeConsentUseCase(consentRepository, eventPublisher);
     }
 
-    /**
-     * Configure RevokeConsentsForProfileUseCase bean.
-     * Wires the consent repository and event publisher.
-     * Used for GDPR compliance when a profile is deleted.
-     */
+    @Bean
+    public VerifyConsentUseCase verifyConsentUseCase(ConsentRepository consentRepository) {
+        return new VerifyConsentUseCase(consentRepository);
+    }
+
+    @Bean
+    public GetConsentHistoryUseCase getConsentHistoryUseCase(ConsentRepository consentRepository) {
+        return new GetConsentHistoryUseCase(consentRepository);
+    }
+
+    @Bean
+    public ProcessTCFConsentUseCase processTCFConsentUseCase(ConsentRepository consentRepository) {
+        return new ProcessTCFConsentUseCase(consentRepository);
+    }
+
     @Bean
     public RevokeConsentsForProfileUseCase revokeConsentsForProfileUseCase(
             ConsentRepository consentRepository,

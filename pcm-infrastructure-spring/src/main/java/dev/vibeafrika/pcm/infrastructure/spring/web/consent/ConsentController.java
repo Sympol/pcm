@@ -2,11 +2,15 @@ package dev.vibeafrika.pcm.infrastructure.spring.web.consent;
 
 import dev.vibeafrika.pcm.consent.application.dto.*;
 import dev.vibeafrika.pcm.consent.application.usecase.*;
+import dev.vibeafrika.pcm.consent.domain.model.ConsentId;
+import dev.vibeafrika.pcm.consent.domain.model.ProfileId;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/consents")
@@ -14,30 +18,43 @@ public class ConsentController {
 
     private final GrantConsentUseCase grantConsentUseCase;
     private final RevokeConsentUseCase revokeConsentUseCase;
+    private final VerifyConsentUseCase verifyConsentUseCase;
+    private final GetConsentHistoryUseCase getConsentHistoryUseCase;
+    private final ProcessTCFConsentUseCase processTCFConsentUseCase;
 
     public ConsentController(
             GrantConsentUseCase grantConsentUseCase,
-            RevokeConsentUseCase revokeConsentUseCase) {
+            RevokeConsentUseCase revokeConsentUseCase,
+            VerifyConsentUseCase verifyConsentUseCase,
+            GetConsentHistoryUseCase getConsentHistoryUseCase,
+            ProcessTCFConsentUseCase processTCFConsentUseCase) {
         this.grantConsentUseCase = grantConsentUseCase;
         this.revokeConsentUseCase = revokeConsentUseCase;
+        this.verifyConsentUseCase = verifyConsentUseCase;
+        this.getConsentHistoryUseCase = getConsentHistoryUseCase;
+        this.processTCFConsentUseCase = processTCFConsentUseCase;
     }
 
+    /**
+     * POST /api/v1/consents - Grant consent.
+     */
     @PostMapping
     public ResponseEntity<ConsentResponse> grantConsent(
             @RequestHeader("X-Tenant-Id") String tenantId,
             @RequestBody GrantConsentRequest request) {
-        
         GrantConsentRequest requestWithTenant = new GrantConsentRequest(
             request.profileId(),
             tenantId,
             request.purpose(),
             request.scope()
         );
-        
         ConsentResponse response = grantConsentUseCase.execute(requestWithTenant);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /**
+     * DELETE /api/v1/consents/{id} - Revoke consent.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<ConsentResponse> revokeConsent(
             @PathVariable UUID id,
@@ -45,5 +62,41 @@ public class ConsentController {
         RevokeConsentRequest request = new RevokeConsentRequest(id, tenantId);
         ConsentResponse response = revokeConsentUseCase.execute(request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/consents/verify?consentId={id} - Verify consent is active.
+     */
+    @GetMapping("/verify")
+    public ResponseEntity<Boolean> verifyConsent(@RequestParam UUID consentId) {
+        boolean active = verifyConsentUseCase.execute(ConsentId.of(consentId));
+        return ResponseEntity.ok(active);
+    }
+
+    /**
+     * GET /api/v1/consents/history?consentId={id} - Get consent event history.
+     */
+    @GetMapping("/history")
+    public ResponseEntity<ConsentHistoryResponse> getConsentHistory(@RequestParam UUID consentId) {
+        ConsentHistoryResponse response = getConsentHistoryUseCase.execute(ConsentId.of(consentId));
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/v1/consents/tcf - Process IAB TCF consent string.
+     */
+    @PostMapping("/tcf")
+    public ResponseEntity<ConsentResponse> processTCFConsent(
+            @RequestHeader("X-Tenant-Id") String tenantId,
+            @RequestBody TCFConsentRequest request) {
+        TCFConsentRequest requestWithTenant = new TCFConsentRequest(
+            request.profileId(),
+            tenantId,
+            request.tcString(),
+            request.vendorId(),
+            request.purposeId()
+        );
+        ConsentResponse response = processTCFConsentUseCase.execute(requestWithTenant);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

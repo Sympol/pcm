@@ -1,4 +1,4 @@
-package dev.vibeafrika.pcm.infrastructure.spring.web;
+package dev.vibeafrika.pcm.infrastructure.spring.web.segment;
 
 import dev.vibeafrika.pcm.segment.application.dto.*;
 import dev.vibeafrika.pcm.segment.application.usecase.*;
