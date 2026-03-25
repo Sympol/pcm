@@ -48,7 +48,7 @@ class IVStoragePropertyTest {
         IAuditLogger noOpAuditLogger = new NoOpAuditLogger();
 
         EncryptionService encryptionService = new EncryptionService(
-                stubKeyManager, noOpAuditLogger, recordingIVCounter);
+                stubKeyManager, new BlindIndexService(stubKeyManager, "test-global-salt"), noOpAuditLogger, recordingIVCounter);
 
         // Act: encrypt the plaintext
         Result<Ciphertext, EncryptionError> result =
@@ -191,6 +191,13 @@ class IVStoragePropertyTest {
         @Override
         public Result<DeletionCertificate, KeyError> deleteUserDEK(String userId, BoundedContext context) {
             return Result.failure(KeyError.of("NOT_IMPLEMENTED", "Not needed in test"));
+        }
+
+        @Override
+        public Result<byte[], KeyError> getBlindIndexKey() {
+            byte[] key = new byte[32];
+            new SecureRandom().nextBytes(key);
+            return Result.success(key);
         }
     }
 

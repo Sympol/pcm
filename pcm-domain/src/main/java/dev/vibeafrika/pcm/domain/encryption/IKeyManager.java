@@ -146,4 +146,17 @@ public interface IKeyManager {
      * @return Result containing a deletion certificate, or KeyError if deletion fails
      */
     Result<DeletionCertificate, KeyError> deleteUserDEK(String userId, BoundedContext context);
+
+    /**
+     * Retrieves the blind index key used for generating searchable HMAC-SHA256 blind indexes.
+     * 
+     * <p>The blind index key is stored separately from DEKs in the KMS to ensure
+     * that compromise of encryption keys does not compromise searchable indexes.
+     * 
+     * <p>This key is used by BlindIndexService to compute:
+     * HMAC-SHA256(blind_index_key, global_salt || record_salt || normalized_plaintext)
+     * 
+     * @return Result containing the blind index key bytes, or KeyError if retrieval fails
+     */
+    Result<byte[], KeyError> getBlindIndexKey();
 }

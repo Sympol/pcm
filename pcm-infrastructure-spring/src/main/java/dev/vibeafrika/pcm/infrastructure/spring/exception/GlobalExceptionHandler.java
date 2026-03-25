@@ -168,6 +168,22 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
+    // ========== Generic Validation Exceptions ==========
+
+    /**
+     * Handler for IllegalArgumentException - typically thrown by DTO compact constructors
+     * for missing required fields (e.g., blank handle, null profile ID).
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/validation-error"));
+        problemDetail.setTitle("Validation Error: Invalid Argument");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
+
     // ========== Pure-Assert Validation Exceptions ==========
 
     /**

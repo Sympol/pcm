@@ -23,5 +23,8 @@ public record TCFConsentRequest(
         if (tcString == null || tcString.isBlank()) {
             throw new IllegalArgumentException("TC String is required");
         }
+        if (tcString.length() < 10) {
+            throw new IllegalArgumentException("TC String is too short (minimum 10 characters)");
+        }
     }
 }

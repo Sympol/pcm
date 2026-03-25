@@ -34,14 +34,17 @@ public class EncryptionService implements IEncryptionService {
     private static final String SERVICE_IDENTITY = "EncryptionService";
     
     private final IKeyManager keyManager;
+    private final BlindIndexService blindIndexService;
     private final IAuditLogger auditLogger;
     private final IVCounter ivCounter;
 
     public EncryptionService(
             IKeyManager keyManager,
+            BlindIndexService blindIndexService,
             IAuditLogger auditLogger,
             IVCounter ivCounter) {
         this.keyManager = Objects.requireNonNull(keyManager, "KeyManager cannot be null");
+        this.blindIndexService = Objects.requireNonNull(blindIndexService, "BlindIndexService cannot be null");
         this.auditLogger = Objects.requireNonNull(auditLogger, "AuditLogger cannot be null");
         this.ivCounter = Objects.requireNonNull(ivCounter, "IVCounter cannot be null");
     }
@@ -385,11 +388,9 @@ public class EncryptionService implements IEncryptionService {
 
     @Override
     public Result<BlindIndex, EncryptionError> generateBlindIndex(String plaintext, String recordSalt) {
-        // This will be implemented in a separate task (BlindIndexService)
-        return Result.failure(EncryptionError.of(
-            "NOT_IMPLEMENTED",
-            "Blind index generation not yet implemented"
-        ));
+        Objects.requireNonNull(plaintext, "Plaintext cannot be null");
+        Objects.requireNonNull(recordSalt, "Record salt cannot be null");
+        return blindIndexService.generateBlindIndex(plaintext, recordSalt);
     }
 
     /**

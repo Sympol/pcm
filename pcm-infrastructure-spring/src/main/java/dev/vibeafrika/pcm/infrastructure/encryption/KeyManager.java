@@ -6,10 +6,12 @@ import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Implementation of IKeyManager that manages the KEK/DEK hierarchy with caching.
@@ -42,6 +44,15 @@ public class KeyManager implements IKeyManager {
     private final Environment environment;
     private final SecureRandom secureRandom;
     private final IVCounter ivCounter;
+
+    /** Optional circuit breaker; null when not configured. */
+    private final KMSCircuitBreaker circuitBreaker;
+
+    /** Epoch-ms timestamp when KMS first became unavailable; 0 = currently available. */
+    private final AtomicLong kmsUnavailableSince = new AtomicLong(0L);
+
+    /** Threshold after which an alert is raised for prolonged KMS unavailability (2 minutes). */
+    private static final long KMS_ALERT_THRESHOLD_MS = 120_000L;
     
     // Track active DEK IDs per context
     private final Map<BoundedContext, UUID> activeDEKIds;
@@ -51,6 +62,12 @@ public class KeyManager implements IKeyManager {
     
     // In-memory metadata store (in production, this would be backed by a database)
     private final Map<UUID, DEKMetadata> dekMetadataStore;
+    
+    // In-memory KEK metadata store (in production, this would be backed by a database)
+    private final Map<UUID, KEKMetadata> kekMetadataStore;
+
+    // Blind index key (32 bytes / 256 bits), stored separately from DEKs
+    private volatile byte[] blindIndexKey;
     
     /**
      * Creates a KeyManager with the specified dependencies.
@@ -63,15 +80,33 @@ public class KeyManager implements IKeyManager {
      */
     public KeyManager(IKMSClient kmsClient, IAuditLogger auditLogger,
                      DEKCache dekCache, Environment environment, IVCounter ivCounter) {
+        this(kmsClient, auditLogger, dekCache, environment, ivCounter, null);
+    }
+
+    /**
+     * Creates a KeyManager with the specified dependencies and an optional circuit breaker.
+     *
+     * @param kmsClient      the KMS client for key operations
+     * @param auditLogger    the audit logger for logging key operations
+     * @param dekCache       the DEK cache for performance optimization
+     * @param environment    the current environment (DEV, STAGING, PROD)
+     * @param ivCounter      the IV counter for managing per-DEK IV state
+     * @param circuitBreaker optional circuit breaker wrapping the KMS client (may be null)
+     */
+    public KeyManager(IKMSClient kmsClient, IAuditLogger auditLogger,
+                     DEKCache dekCache, Environment environment, IVCounter ivCounter,
+                     KMSCircuitBreaker circuitBreaker) {
         this.kmsClient = Objects.requireNonNull(kmsClient, "KMS client cannot be null");
         this.auditLogger = Objects.requireNonNull(auditLogger, "Audit logger cannot be null");
         this.dekCache = Objects.requireNonNull(dekCache, "DEK cache cannot be null");
         this.environment = Objects.requireNonNull(environment, "Environment cannot be null");
         this.ivCounter = Objects.requireNonNull(ivCounter, "IV counter cannot be null");
+        this.circuitBreaker = circuitBreaker; // nullable
         this.secureRandom = new SecureRandom();
         this.activeDEKIds = new ConcurrentHashMap<>();
         this.kekIds = new ConcurrentHashMap<>();
         this.dekMetadataStore = new ConcurrentHashMap<>();
+        this.kekMetadataStore = new ConcurrentHashMap<>();
     }
     
     @Override
@@ -132,7 +167,7 @@ public class KeyManager implements IKeyManager {
         }
         
         // Get encrypted DEK from KMS
-        Result<DEK, KMSError> decryptResult = kmsClient.decryptDEK(
+        Result<DEK, KMSError> decryptResult = effectiveKmsClient().decryptDEK(
             metadata.encryptedDEK,
             metadata.kekId
         );
@@ -175,6 +210,14 @@ public class KeyManager implements IKeyManager {
     public Result<UUID, KeyError> rotateDEK(BoundedContext context) {
         Objects.requireNonNull(context, "Context cannot be null");
         
+        // Reject new encryption when circuit breaker is in read-only mode
+        if (circuitBreaker != null && circuitBreaker.isReadOnly()) {
+            return Result.failure(KeyError.of(
+                "KMS_UNAVAILABLE",
+                "KMS is unavailable: circuit breaker is open"
+            ));
+        }
+
         // Get KEK ID for this context
         UUID kekId = kekIds.get(context);
         if (kekId == null) {
@@ -190,7 +233,7 @@ public class KeyManager implements IKeyManager {
         DEK newDEK = DEK.of(dekBytes);
         
         // Encrypt DEK with KEK in KMS
-        Result<EncryptedDEK, KMSError> encryptResult = kmsClient.encryptDEK(newDEK, kekId);
+        Result<EncryptedDEK, KMSError> encryptResult = effectiveKmsClient().encryptDEK(newDEK, kekId);
         if (encryptResult.isFailure()) {
             KMSError kmsError = encryptResult.getError().orElseThrow();
             return Result.failure(KeyError.of(
@@ -258,8 +301,10 @@ public class KeyManager implements IKeyManager {
     public Result<UUID, KeyError> rotateKEK(BoundedContext context) {
         Objects.requireNonNull(context, "Context cannot be null");
         
+        UUID oldKEKId = kekIds.get(context);
+        
         // Generate new KEK in KMS
-        Result<UUID, KMSError> generateResult = kmsClient.generateKEK(context, environment);
+        Result<UUID, KMSError> generateResult = effectiveKmsClient().generateKEK(context, environment);
         if (generateResult.isFailure()) {
             KMSError kmsError = generateResult.getError().orElseThrow();
             return Result.failure(KeyError.of(
@@ -270,21 +315,64 @@ public class KeyManager implements IKeyManager {
         }
         
         UUID newKEKId = generateResult.getValue().orElseThrow();
-        UUID oldKEKId = kekIds.get(context);
         
-        // Re-encrypt all DEKs for this context with the new KEK
-        dekMetadataStore.values().stream()
-            .filter(metadata -> metadata.context == context && metadata.kekId.equals(oldKEKId))
-            .forEach(metadata -> {
-                // This would involve decrypting with old KEK and re-encrypting with new KEK
-                // For now, we'll just update the KEK ID reference
-                metadata.kekId = newKEKId;
-            });
+        // Retrieve all DEKs encrypted with the old KEK and re-encrypt each with the new KEK
+        if (oldKEKId != null) {
+            for (DEKMetadata metadata : dekMetadataStore.values()) {
+                if (metadata.context == context && oldKEKId.equals(metadata.kekId)) {
+                    // Decrypt the DEK using the old KEK
+                    Result<DEK, KMSError> decryptResult = effectiveKmsClient().decryptDEK(
+                        metadata.encryptedDEK, oldKEKId
+                    );
+                    if (decryptResult.isFailure()) {
+                        KMSError kmsError = decryptResult.getError().orElseThrow();
+                        logger.error("Failed to decrypt DEK {} during KEK rotation for context {}: {}",
+                            metadata.keyId, context, kmsError.getMessage());
+                        return Result.failure(KeyError.of(
+                            "KMS_DECRYPTION_FAILED",
+                            "Failed to decrypt DEK " + metadata.keyId + " during KEK rotation: " + kmsError.getMessage(),
+                            new RuntimeException(kmsError.getMessage())
+                        ));
+                    }
+                    
+                    DEK dek = decryptResult.getValue().orElseThrow();
+                    
+                    // Re-encrypt the DEK with the new KEK
+                    Result<EncryptedDEK, KMSError> reEncryptResult = effectiveKmsClient().encryptDEK(dek, newKEKId);
+                    if (reEncryptResult.isFailure()) {
+                        KMSError kmsError = reEncryptResult.getError().orElseThrow();
+                        logger.error("Failed to re-encrypt DEK {} with new KEK during KEK rotation for context {}: {}",
+                            metadata.keyId, context, kmsError.getMessage());
+                        return Result.failure(KeyError.of(
+                            "KMS_ENCRYPTION_FAILED",
+                            "Failed to re-encrypt DEK " + metadata.keyId + " with new KEK: " + kmsError.getMessage(),
+                            new RuntimeException(kmsError.getMessage())
+                        ));
+                    }
+                    
+                    // Update DEK metadata with new KEK ID and re-encrypted DEK
+                    metadata.kekId = newKEKId;
+                    metadata.encryptedDEK = reEncryptResult.getValue().orElseThrow();
+                }
+            }
+            
+            // Mark old KEK as rotated
+            KEKMetadata oldKEKMetadata = kekMetadataStore.get(oldKEKId);
+            if (oldKEKMetadata != null) {
+                oldKEKMetadata.status = KeyStatus.ROTATED;
+                oldKEKMetadata.rotatedAt = Instant.now();
+            }
+        }
         
-        // Update KEK ID
+        // Store new KEK metadata
+        kekMetadataStore.put(newKEKId, new KEKMetadata(
+            newKEKId, context, environment, Instant.now(), null, KeyStatus.ACTIVE
+        ));
+        
+        // Update active KEK ID for this context
         kekIds.put(context, newKEKId);
         
-        // Invalidate all cached DEKs for this context
+        // Invalidate all cached DEKs for this context so they are re-fetched with new KEK
         dekMetadataStore.values().stream()
             .filter(metadata -> metadata.context == context)
             .forEach(metadata -> dekCache.invalidate(metadata.keyId));
@@ -358,6 +446,58 @@ public class KeyManager implements IKeyManager {
     }
     
     /**
+     * Returns the effective KMS client: the circuit breaker when configured,
+     * otherwise the raw kmsClient.
+     */
+    private IKMSClient effectiveKmsClient() {
+        return circuitBreaker != null ? circuitBreaker : kmsClient;
+    }
+
+    /**
+     * Checks KMS availability via health check and manages the unavailability
+     * tracking / alerting lifecycle.
+     *
+     * <p>If the health check fails and a circuit breaker is configured, a
+     * CRITICAL security event is logged. After 2 minutes of continuous
+     * unavailability an additional CRITICAL alert is emitted.
+     */
+    private void checkKmsAvailability() {
+        Result<KMSHealth, KMSError> healthResult = effectiveKmsClient().healthCheck();
+
+        boolean available = healthResult.isSuccess() &&
+                healthResult.getValue().map(KMSHealth::isAvailable).orElse(false);
+
+        if (!available) {
+            long now = System.currentTimeMillis();
+            long since = kmsUnavailableSince.compareAndExchange(0L, now);
+            if (since == 0L) {
+                since = now; // first time we recorded unavailability
+            }
+
+            if (circuitBreaker != null) {
+                String msg = healthResult.isFailure()
+                        ? healthResult.getError().map(KMSError::getMessage).orElse("unknown")
+                        : healthResult.getValue().map(KMSHealth::getMessage).orElse("unhealthy");
+
+                logSecurityEvent("KMS_UNAVAILABLE", null, "KMS health check failed: " + msg);
+            }
+
+            long unavailableMs = now - since;
+            if (unavailableMs >= KMS_ALERT_THRESHOLD_MS) {
+                logger.error("ALERT: KMS has been unavailable for {}ms (threshold {}ms) – operations team must be notified",
+                        unavailableMs, KMS_ALERT_THRESHOLD_MS);
+                if (circuitBreaker != null) {
+                    logSecurityEvent("KMS_PROLONGED_UNAVAILABILITY", null,
+                            "KMS unavailable for " + unavailableMs + "ms – alerting operations");
+                }
+            }
+        } else {
+            // KMS is back – reset the unavailability tracker
+            kmsUnavailableSince.set(0L);
+        }
+    }
+
+    /**
      * Logs a key access event.
      */
     private void logKeyAccess(UUID keyId, String accessType, boolean success) {
@@ -401,7 +541,7 @@ public class KeyManager implements IKeyManager {
      */
     private void logSecurityEvent(String eventType, UUID keyId, String description) {
         // Get context from metadata if available
-        DEKMetadata metadata = dekMetadataStore.get(keyId);
+        DEKMetadata metadata = keyId != null ? dekMetadataStore.get(keyId) : null;
         BoundedContext context = metadata != null ? metadata.context : BoundedContext.PROFILE;
         
         SecurityEvent event = SecurityEvent.builder()
@@ -417,12 +557,25 @@ public class KeyManager implements IKeyManager {
         auditLogger.logSecurityEvent(event);
     }
     
+    @Override
+    public Result<byte[], KeyError> getBlindIndexKey() {
+        // The blind index key is stored as a fixed-size 32-byte key in the metadata store.
+        // In production this would be fetched from KMS; here we use a cached in-memory key.
+        if (blindIndexKey == null) {
+            return Result.failure(KeyError.of(
+                "BLIND_INDEX_KEY_NOT_INITIALIZED",
+                "Blind index key has not been initialized. Call initializeBlindIndexKey() first."
+            ));
+        }
+        return Result.success(Arrays.copyOf(blindIndexKey, blindIndexKey.length));
+    }
+
     /**
      * Initializes a KEK for a bounded context.
      * This should be called during system setup.
      */
     public Result<UUID, KeyError> initializeKEK(BoundedContext context) {
-        Result<UUID, KMSError> generateResult = kmsClient.generateKEK(context, environment);
+        Result<UUID, KMSError> generateResult = effectiveKmsClient().generateKEK(context, environment);
         if (generateResult.isFailure()) {
             KMSError kmsError = generateResult.getError().orElseThrow();
             return Result.failure(KeyError.of(
@@ -435,11 +588,38 @@ public class KeyManager implements IKeyManager {
         UUID kekId = generateResult.getValue().orElseThrow();
         kekIds.put(context, kekId);
         
+        // Store KEK metadata
+        kekMetadataStore.put(kekId, new KEKMetadata(
+            kekId, context, environment, Instant.now(), null, KeyStatus.ACTIVE
+        ));
+        
         logger.info("KEK initialized for context: {}, KEK ID: {}", context, kekId);
         
         return Result.success(kekId);
     }
-    
+
+    /**
+     * Initializes the blind index key with a cryptographically secure random 256-bit key.
+     * In production, this key would be stored in and retrieved from KMS.
+     */
+    public void initializeBlindIndexKey() {
+        byte[] key = new byte[32];
+        secureRandom.nextBytes(key);
+        this.blindIndexKey = key;
+        logger.info("Blind index key initialized");
+    }
+
+    /**
+     * Sets the blind index key directly (for testing or when loading from KMS).
+     */
+    public void setBlindIndexKey(byte[] key) {
+        Objects.requireNonNull(key, "Blind index key cannot be null");
+        if (key.length != 32) {
+            throw new IllegalArgumentException("Blind index key must be exactly 256 bits (32 bytes)");
+        }
+        this.blindIndexKey = Arrays.copyOf(key, key.length);
+    }
+
     /**
      * Internal class to store DEK metadata.
      */
@@ -471,6 +651,28 @@ public class KeyManager implements IKeyManager {
             this.encryptionCount = encryptionCount;
             this.bytesEncrypted = bytesEncrypted;
             this.encryptedDEK = encryptedDEK;
+        }
+    }
+
+    /**
+     * Internal class to store KEK metadata.
+     */
+    private static class KEKMetadata {
+        UUID keyId;
+        BoundedContext context;
+        Environment environment;
+        Instant createdAt;
+        Instant rotatedAt;
+        KeyStatus status;
+
+        KEKMetadata(UUID keyId, BoundedContext context, Environment environment,
+                    Instant createdAt, Instant rotatedAt, KeyStatus status) {
+            this.keyId = keyId;
+            this.context = context;
+            this.environment = environment;
+            this.createdAt = createdAt;
+            this.rotatedAt = rotatedAt;
+            this.status = status;
         }
     }
 }

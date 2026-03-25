@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,12 +36,18 @@ public class ProfileController {
     @PostMapping
     public ResponseEntity<ProfileResponse> createProfile(
             @RequestHeader("X-Tenant-Id") String tenantId,
-            @RequestBody CreateProfileRequest request) {
+            @RequestBody Map<String, Object> body) {
         
+        String handle = (String) body.get("handle");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attributes = body.containsKey("attributes")
+            ? (Map<String, Object>) body.get("attributes")
+            : Map.of();
+
         CreateProfileRequest requestWithTenant = new CreateProfileRequest(
             tenantId,
-            request.handle(),
-            request.attributes()
+            handle,
+            attributes
         );
         
         ProfileResponse response = createProfileUseCase.execute(requestWithTenant);
@@ -51,12 +58,17 @@ public class ProfileController {
     public ResponseEntity<ProfileResponse> updateProfile(
             @PathVariable UUID id,
             @RequestHeader("X-Tenant-Id") String tenantId,
-            @RequestBody UpdateProfileRequest request) {
+            @RequestBody Map<String, Object> body) {
         
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attributes = body.containsKey("attributes")
+            ? (Map<String, Object>) body.get("attributes")
+            : Map.of();
+
         UpdateProfileRequest requestWithIds = new UpdateProfileRequest(
             id,
             tenantId,
-            request.attributes()
+            attributes
         );
         
         ProfileResponse response = updateProfileUseCase.execute(requestWithIds);
@@ -74,12 +86,12 @@ public class ProfileController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ProfileResponse> eraseProfile(
+    public ResponseEntity<Void> eraseProfile(
             @PathVariable UUID id,
             @RequestHeader("X-Tenant-Id") String tenantId) {
         
         EraseProfileRequest request = new EraseProfileRequest(id, tenantId);
-        ProfileResponse response = eraseProfileUseCase.execute(request);
-        return ResponseEntity.ok(response);
+        eraseProfileUseCase.execute(request);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -4,16 +4,26 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
+import dev.vibeafrika.pcm.preference.domain.model.Preference;
+import dev.vibeafrika.pcm.preference.domain.model.PreferenceId;
+import dev.vibeafrika.pcm.preference.domain.model.PreferenceKey;
+import dev.vibeafrika.pcm.preference.domain.model.ProfileId;
+import dev.vibeafrika.pcm.preference.domain.model.TenantId;
+import net.jqwik.api.ForAll;
+import net.jqwik.api.Property;
+import net.jqwik.api.constraints.NotBlank;
+import net.jqwik.api.constraints.StringLength;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Property-based test for domain layer framework independence.
- * 
- * **Validates: Requirements 1.1, 1.2, 1.3, 1.4**
  * 
  * Feature: framework-agnostic-domain, Property 1: Domain Layer Framework Independence
  * 
@@ -48,7 +58,7 @@ class DomainLayerFrameworkIndependencePropertyTest {
                 "org.springframework.stereotype..",
                 "org.springframework.transaction.."
             )
-            .because("Domain layer must be framework-independent (Requirement 1.1)");
+            .because("Domain layer must be framework-independent");
 
         rule.check(domainClasses);
     }
@@ -63,7 +73,7 @@ class DomainLayerFrameworkIndependencePropertyTest {
                 "org.hibernate..",
                 "org.hibernate.annotations.."
             )
-            .because("Domain layer must not depend on JPA/Hibernate (Requirement 1.2)");
+            .because("Domain layer must not depend on JPA/Hibernate");
 
         rule.check(domainClasses);
     }
@@ -81,7 +91,7 @@ class DomainLayerFrameworkIndependencePropertyTest {
                 "io.quarkus..",
                 "io.micronaut.."
             )
-            .because("Domain layer must not depend on web frameworks (Requirement 1.3)");
+            .because("Domain layer must not depend on web frameworks");
 
         rule.check(domainClasses);
     }
@@ -109,8 +119,50 @@ class DomainLayerFrameworkIndependencePropertyTest {
                 "dev.vibeafrika.pcm..",
                 "io.github.sympol.pure.."  // pure-assert is the ONLY allowed external dependency
             )
-            .because("Domain layer must only depend on Java stdlib and pure-assert (Requirement 1.4)");
+            .because("Domain layer must only depend on Java stdlib and pure-assert");
 
         rule.check(domainClasses);
+    }
+
+    /**
+     * Property 1: Domain Layer Framework Independence - Runtime Verification
+     *
+     * Verifies that core domain objects can be instantiated using plain Java
+     * constructors/factory methods without any Spring ApplicationContext or
+     * framework bootstrap. This is a runtime complement to the static ArchUnit checks.
+     */
+    @Property
+    void domainClassesCanBeInstantiatedWithoutFrameworkContext(
+            @ForAll @NotBlank @StringLength(min = 1, max = 100) String tenantIdValue,
+            @ForAll @NotBlank @StringLength(min = 1, max = 100) String preferenceKeyValue) {
+
+        // TenantId - plain factory, no framework
+        TenantId tenantId = TenantId.of(tenantIdValue);
+        assertThat(tenantId).isNotNull();
+        assertThat(tenantId.getValue()).isEqualTo(tenantIdValue);
+
+        // ProfileId - plain factory, no framework
+        UUID profileUuid = UUID.randomUUID();
+        ProfileId profileId = ProfileId.of(profileUuid);
+        assertThat(profileId).isNotNull();
+        assertThat(profileId.getValue()).isEqualTo(profileUuid);
+
+        // PreferenceId - plain factory, no framework
+        PreferenceId preferenceId = PreferenceId.generate();
+        assertThat(preferenceId).isNotNull();
+        assertThat(preferenceId.getValue()).isNotNull();
+
+        // PreferenceKey - plain factory, no framework
+        PreferenceKey preferenceKey = PreferenceKey.of(preferenceKeyValue);
+        assertThat(preferenceKey).isNotNull();
+        assertThat(preferenceKey.getValue()).isEqualTo(preferenceKeyValue);
+
+        // Preference aggregate root - plain factory, no framework
+        Preference preference = Preference.create(tenantId, profileId);
+        assertThat(preference).isNotNull();
+        assertThat(preference.getId()).isNotNull();
+        assertThat(preference.getTenantId()).isEqualTo(tenantId);
+        assertThat(preference.getProfileId()).isEqualTo(profileId);
+        assertThat(preference.isDeleted()).isFalse();
     }
 }
