@@ -359,5 +359,10 @@ class MultipleActiveKeysPropertyTest {
         public Result<Void, AuditError> logKeyAccess(KeyAccessEvent event) {
             return Result.failure(NOOP);
         }
+
+        @Override
+        public Result<Void, AuditError> logAuditLogAccess(AuditLogAccessEvent event) {
+            return Result.failure(NOOP);
+        }
     }
 }

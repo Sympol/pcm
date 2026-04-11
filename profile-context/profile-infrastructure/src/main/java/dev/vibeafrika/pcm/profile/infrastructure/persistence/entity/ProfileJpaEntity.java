@@ -1,5 +1,8 @@
 package dev.vibeafrika.pcm.profile.infrastructure.persistence.entity;
 
+import dev.vibeafrika.pcm.domain.encryption.EncryptedField;
+import dev.vibeafrika.pcm.domain.encryption.PIIType;
+import dev.vibeafrika.pcm.profile.infrastructure.persistence.listener.ProfileEncryptionEntityListener;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -22,9 +25,10 @@ import java.util.UUID;
 @Table(name = "profile_profiles", indexes = {
     @Index(name = "idx_profile_tenant", columnList = "tenant_id"),
     @Index(name = "idx_profile_handle", columnList = "handle", unique = true),
+    @Index(name = "idx_profile_handle_blind_index", columnList = "handle_blind_index"),
     @Index(name = "idx_profile_tenant_id", columnList = "tenant_id,id")
 })
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({AuditingEntityListener.class, ProfileEncryptionEntityListener.class})
 public class ProfileJpaEntity {
 
     @Id
@@ -34,8 +38,12 @@ public class ProfileJpaEntity {
     @Column(name = "tenant_id", nullable = false, length = 100)
     private String tenantId;
 
-    @Column(name = "handle", nullable = false, length = 30, unique = true)
+    @EncryptedField(piiType = PIIType.STANDARD_PII, searchable = true, blindIndexField = "handleBlindIndex")
+    @Column(name = "handle", nullable = false, length = 500, unique = true)
     private String handle;
+
+    @Column(name = "handle_blind_index")
+    private String handleBlindIndex;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attributes", columnDefinition = "jsonb")
@@ -83,6 +91,14 @@ public class ProfileJpaEntity {
 
     public void setHandle(String handle) {
         this.handle = handle;
+    }
+
+    public String getHandleBlindIndex() {
+        return handleBlindIndex;
+    }
+
+    public void setHandleBlindIndex(String handleBlindIndex) {
+        this.handleBlindIndex = handleBlindIndex;
     }
 
     public Map<String, Object> getAttributes() {

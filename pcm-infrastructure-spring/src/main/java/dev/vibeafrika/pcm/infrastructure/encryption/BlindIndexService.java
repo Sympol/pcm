@@ -24,7 +24,13 @@ import java.util.Objects;
  *
  * <p>Where normalization = lowercase + trim.
  *
- * <p>Requirements: 6.2, 6.3, 6.5, 6.6
+ * <p>Side-channel protection: HMAC verification uses {@link ConstantTime#verifyHmac}
+ * to prevent timing attacks. The JDK's {@code HmacSHA256} implementation runs in
+ * constant time for the MAC computation itself; the comparison is also constant-time.
+ *
+ * <p>Note on cache-timing attacks: the HMAC key material is accessed through a
+ * fixed-size byte array. Callers should avoid branching on the blind index value
+ * to prevent cache-timing leakage.
  */
 public class BlindIndexService {
 
@@ -78,14 +84,14 @@ public class BlindIndexService {
         byte[] blindIndexKey = keyResult.getValue().orElseThrow();
 
         try {
-            // 2. Normalize plaintext: lowercase + trim (Requirement 6.6)
+            // 2. Normalize plaintext: lowercase + trim 
             String normalized = plaintext.trim().toLowerCase();
 
             // 3. Build HMAC message: global_salt || record_salt || normalized_plaintext
             String message = globalSalt + recordSalt + normalized;
             byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
 
-            // 4. Compute HMAC-SHA256 (Requirement 6.3)
+            // 4. Compute HMAC-SHA256 
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
             mac.init(new SecretKeySpec(blindIndexKey, HMAC_ALGORITHM));
             byte[] hmacBytes = mac.doFinal(messageBytes);
@@ -102,5 +108,32 @@ public class BlindIndexService {
                 e
             ));
         }
+    }
+
+    /**
+     * Verifies a blind index against a plaintext and per-record salt in constant time.
+     *
+     * <p>Uses {@link ConstantTime#verifyHmac} to prevent timing side-channel attacks.
+     *
+     * @param plaintext  the plaintext to verify
+     * @param recordSalt the per-record salt used when the blind index was generated
+     * @param expected   the expected blind index
+     * @return {@code true} if the blind index matches, {@code false} otherwise
+     */
+    public boolean verifyBlindIndex(String plaintext, String recordSalt, BlindIndex expected) {
+        Objects.requireNonNull(plaintext, "Plaintext cannot be null");
+        Objects.requireNonNull(recordSalt, "Record salt cannot be null");
+        Objects.requireNonNull(expected, "Expected blind index cannot be null");
+
+        Result<BlindIndex, EncryptionError> result = generateBlindIndex(plaintext, recordSalt);
+        if (result.isFailure()) {
+            return false;
+        }
+
+        BlindIndex actual = result.getValue().orElseThrow();
+        // Constant-time comparison to prevent timing attacks 
+        byte[] expectedBytes = expected.getValue().getBytes(StandardCharsets.UTF_8);
+        byte[] actualBytes = actual.getValue().getBytes(StandardCharsets.UTF_8);
+        return ConstantTime.verifyHmac(expectedBytes, actualBytes);
     }
 }

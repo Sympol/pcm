@@ -28,6 +28,26 @@ public final class KMSError {
         return new KMSError(code, message, cause);
     }
 
+    /** Creates a {@code KMSError} using a typed {@link EncryptionErrorCodes} constant. */
+    public static KMSError of(EncryptionErrorCodes code, String message) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new KMSError(code.code(), message, null);
+    }
+
+    /** Creates a {@code KMSError} using a typed {@link EncryptionErrorCodes} constant with a cause. */
+    public static KMSError of(EncryptionErrorCodes code, String message, Throwable cause) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new KMSError(code.code(), message, cause);
+    }
+
+    /** Creates a {@code KMSError} using the default message from the error code. */
+    public static KMSError of(EncryptionErrorCodes code) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        return new KMSError(code.code(), code.getDefaultMessage(), null);
+    }
+
     public String getCode() {
         return code;
     }

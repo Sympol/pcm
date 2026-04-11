@@ -104,4 +104,29 @@ public interface IEncryptionService {
      * @return Result containing the BlindIndex on success, or EncryptionError on failure
      */
     Result<BlindIndex, EncryptionError> generateBlindIndex(String plaintext, String recordSalt);
+
+    /**
+     * Shares data across bounded contexts by re-encrypting with the target context DEK.
+     *
+     * <p>Cross-context data sharing process:
+     * <ol>
+     *   <li>Decrypts the ciphertext using the source context's DEK</li>
+     *   <li>Re-encrypts the plaintext using the target context's active DEK</li>
+     *   <li>Returns the new ciphertext bound to the target context</li>
+     * </ol>
+     *
+     * <p>This ensures that data shared between bounded contexts is always encrypted
+     * with the correct context-specific DEK, maintaining KEK isolation per
+     * Requirement 16.9.
+     *
+     * @param ciphertext    the ciphertext encrypted under the source context DEK
+     * @param sourceContext the bounded context that originally encrypted the data
+     * @param targetContext the bounded context that will receive the re-encrypted data
+     * @return Result containing the new Ciphertext encrypted with the target context DEK,
+     *         or EncryptionError on failure
+     */
+    Result<Ciphertext, EncryptionError> shareAcrossContexts(
+            Ciphertext ciphertext,
+            BoundedContext sourceContext,
+            BoundedContext targetContext);
 }

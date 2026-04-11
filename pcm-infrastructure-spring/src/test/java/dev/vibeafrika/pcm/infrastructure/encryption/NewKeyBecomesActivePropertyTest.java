@@ -299,6 +299,11 @@ class NewKeyBecomesActivePropertyTest {
         }
 
         @Override
+        public Result<Unit, KMSError> deleteDEK(UUID keyId) {
+            return Result.success(Unit.unit());
+        }
+
+        @Override
         public Result<KMSHealth, KMSError> healthCheck() {
             return Result.success(KMSHealth.healthy(0L));
         }
@@ -333,6 +338,11 @@ class NewKeyBecomesActivePropertyTest {
 
         @Override
         public Result<Void, AuditError> logKeyAccess(KeyAccessEvent event) {
+            return Result.failure(NOOP);
+        }
+
+        @Override
+        public Result<Void, AuditError> logAuditLogAccess(AuditLogAccessEvent event) {
             return Result.failure(NOOP);
         }
     }

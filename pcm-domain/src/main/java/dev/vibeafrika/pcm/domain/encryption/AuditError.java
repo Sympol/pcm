@@ -28,6 +28,26 @@ public final class AuditError {
         return new AuditError(code, message, cause);
     }
 
+    /** Creates an {@code AuditError} using a typed {@link EncryptionErrorCodes} constant. */
+    public static AuditError of(EncryptionErrorCodes code, String message) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new AuditError(code.code(), message, null);
+    }
+
+    /** Creates an {@code AuditError} using a typed {@link EncryptionErrorCodes} constant with a cause. */
+    public static AuditError of(EncryptionErrorCodes code, String message, Throwable cause) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new AuditError(code.code(), message, cause);
+    }
+
+    /** Creates an {@code AuditError} using the default message from the error code. */
+    public static AuditError of(EncryptionErrorCodes code) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        return new AuditError(code.code(), code.getDefaultMessage(), null);
+    }
+
     public String getCode() {
         return code;
     }

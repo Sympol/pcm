@@ -21,6 +21,7 @@ import dev.vibeafrika.pcm.domain.encryption.IKMSClient;
 import dev.vibeafrika.pcm.domain.encryption.KMSError;
 import dev.vibeafrika.pcm.domain.encryption.KMSHealth;
 import dev.vibeafrika.pcm.domain.encryption.Result;
+import dev.vibeafrika.pcm.domain.encryption.Unit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -196,6 +197,30 @@ public class AzureKeyVaultClient implements IKMSClient {
                     context, environment, e.getMessage());
             return Result.failure(KMSError.of("KMS_KEY_GENERATION_FAILED",
                     "Failed to generate KEK in Azure Key Vault", e));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Initiates deletion of the DEK key in Azure Key Vault. The key enters a
+     * soft-delete state and is permanently purged after the vault's retention period.
+     */
+    @Override
+    public Result<Unit, KMSError> deleteDEK(UUID keyId) {
+        Objects.requireNonNull(keyId, "Key ID cannot be null");
+
+        try {
+            // Azure Key Vault key names use dashes; the keyId is used as the key name
+            String keyName = keyId.toString();
+            keyClient.beginDeleteKey(keyName).waitForCompletion();
+            logger.info("Deleted DEK from Azure Key Vault: keyId={}", keyId);
+            return Result.success(Unit.unit());
+
+        } catch (Exception e) {
+            logger.error("Azure Key Vault delete failed for keyId {}: {}", keyId, e.getMessage());
+            return Result.failure(KMSError.of("KMS_DELETE_FAILED",
+                    "Failed to delete DEK from Azure Key Vault", e));
         }
     }
 

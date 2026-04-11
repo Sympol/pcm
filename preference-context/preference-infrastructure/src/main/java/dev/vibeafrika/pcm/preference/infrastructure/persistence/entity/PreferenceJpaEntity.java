@@ -1,5 +1,6 @@
 package dev.vibeafrika.pcm.preference.infrastructure.persistence.entity;
 
+import dev.vibeafrika.pcm.preference.infrastructure.persistence.listener.PreferenceEncryptionEntityListener;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -22,7 +23,7 @@ import java.util.UUID;
     @Index(name = "idx_preference_profile", columnList = "profile_id"),
     @Index(name = "idx_preference_tenant_profile", columnList = "tenant_id,profile_id")
 })
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({AuditingEntityListener.class, PreferenceEncryptionEntityListener.class})
 public class PreferenceJpaEntity {
 
     @Id

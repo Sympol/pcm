@@ -28,6 +28,26 @@ public final class KeyError {
         return new KeyError(code, message, cause);
     }
 
+    /** Creates a {@code KeyError} using a typed {@link EncryptionErrorCodes} constant. */
+    public static KeyError of(EncryptionErrorCodes code, String message) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new KeyError(code.code(), message, null);
+    }
+
+    /** Creates a {@code KeyError} using a typed {@link EncryptionErrorCodes} constant with a cause. */
+    public static KeyError of(EncryptionErrorCodes code, String message, Throwable cause) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new KeyError(code.code(), message, cause);
+    }
+
+    /** Creates a {@code KeyError} using the default message from the error code. */
+    public static KeyError of(EncryptionErrorCodes code) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        return new KeyError(code.code(), code.getDefaultMessage(), null);
+    }
+
     public String getCode() {
         return code;
     }

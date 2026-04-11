@@ -131,8 +131,9 @@ public final class CiphertextFormat {
             return Result.success(Ciphertext.of(buffer.array()));
 
         } catch (Exception e) {
-            return Result.failure(DecryptionError.of("FORMAT_ERROR", 
-                "Failed to format ciphertext: " + e.getMessage()));
+            // Do not include e.getMessage() – it may contain sensitive data (req 8.6)
+            return Result.failure(DecryptionError.of("FORMAT_ERROR",
+                "Failed to format ciphertext"));
         }
     }
 
@@ -216,8 +217,9 @@ public final class CiphertextFormat {
             ));
 
         } catch (Exception e) {
-            return Result.failure(DecryptionError.of("PARSE_ERROR", 
-                "Failed to parse ciphertext: " + e.getMessage()));
+            // Do not include e.getMessage() – it may contain sensitive data (req 8.6)
+            return Result.failure(DecryptionError.of("PARSE_ERROR",
+                "Failed to parse ciphertext"));
         }
     }
 

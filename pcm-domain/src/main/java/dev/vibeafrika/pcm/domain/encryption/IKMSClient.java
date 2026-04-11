@@ -88,6 +88,24 @@ public interface IKMSClient {
     Result<UUID, KMSError> generateKEK(BoundedContext context, Environment environment);
 
     /**
+     * Deletes a DEK from the KMS, making it permanently unrecoverable.
+     *
+     * <p>This operation is used for cryptographic erasure under GDPR Article 17
+     * (right to erasure). Once a DEK is deleted, all data encrypted with it
+     * becomes permanently unrecoverable.
+     *
+     * <p>This method is used during:
+     * <ul>
+     *   <li>GDPR right-to-erasure requests (user data deletion)</li>
+     *   <li>Key compromise response (immediate revocation)</li>
+     * </ul>
+     *
+     * @param keyId the UUID of the DEK to delete from KMS
+     * @return Result containing Unit on success, or KMSError if deletion fails
+     */
+    Result<Unit, KMSError> deleteDEK(UUID keyId);
+
+    /**
      * Checks the health and availability of the KMS.
      * 
      * <p>This method is used for:

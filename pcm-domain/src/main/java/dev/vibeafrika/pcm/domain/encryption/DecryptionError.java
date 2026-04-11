@@ -28,6 +28,26 @@ public final class DecryptionError {
         return new DecryptionError(code, message, cause);
     }
 
+    /** Creates a {@code DecryptionError} using a typed {@link EncryptionErrorCodes} constant. */
+    public static DecryptionError of(EncryptionErrorCodes code, String message) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new DecryptionError(code.code(), message, null);
+    }
+
+    /** Creates a {@code DecryptionError} using a typed {@link EncryptionErrorCodes} constant with a cause. */
+    public static DecryptionError of(EncryptionErrorCodes code, String message, Throwable cause) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        Objects.requireNonNull(message, "Error message cannot be null");
+        return new DecryptionError(code.code(), message, cause);
+    }
+
+    /** Creates a {@code DecryptionError} using the default message from the error code. */
+    public static DecryptionError of(EncryptionErrorCodes code) {
+        Objects.requireNonNull(code, "Error code cannot be null");
+        return new DecryptionError(code.code(), code.getDefaultMessage(), null);
+    }
+
     public String getCode() {
         return code;
     }

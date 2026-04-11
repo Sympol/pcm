@@ -1,6 +1,7 @@
 package dev.vibeafrika.pcm.consent.infrastructure.persistence.entity;
 
 import dev.vibeafrika.pcm.consent.domain.model.ConsentStatus;
+import dev.vibeafrika.pcm.consent.infrastructure.persistence.listener.ConsentEncryptionEntityListener;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -24,7 +25,7 @@ import java.util.UUID;
     @Index(name = "idx_consent_status", columnList = "status"),
     @Index(name = "idx_consent_tenant_profile", columnList = "tenant_id,profile_id")
 })
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({AuditingEntityListener.class, ConsentEncryptionEntityListener.class})
 public class ConsentJpaEntity {
 
     @Id

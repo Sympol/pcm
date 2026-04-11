@@ -1,5 +1,6 @@
 package dev.vibeafrika.pcm.segment.infrastructure.persistence.entity;
 
+import dev.vibeafrika.pcm.segment.infrastructure.persistence.listener.SegmentEncryptionEntityListener;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -26,7 +27,7 @@ import java.util.UUID;
     @Index(name = "idx_segment_profile", columnList = "profile_id"),
     @Index(name = "idx_segment_tenant_profile", columnList = "tenant_id,profile_id")
 })
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners({AuditingEntityListener.class, SegmentEncryptionEntityListener.class})
 public class SegmentJpaEntity {
 
     @Id

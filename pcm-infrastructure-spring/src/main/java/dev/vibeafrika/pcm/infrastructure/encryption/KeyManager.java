@@ -3,7 +3,10 @@ package dev.vibeafrika.pcm.infrastructure.encryption;
 import dev.vibeafrika.pcm.domain.encryption.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.springframework.lang.Nullable;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Arrays;
@@ -12,6 +15,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Implementation of IKeyManager that manages the KEK/DEK hierarchy with caching.
@@ -47,6 +52,10 @@ public class KeyManager implements IKeyManager {
 
     /** Optional circuit breaker; null when not configured. */
     private final KMSCircuitBreaker circuitBreaker;
+
+    /** Optional metrics for cache hit/miss tracking; null when not configured. */
+    @Nullable
+    private EncryptionMetrics encryptionMetrics;
 
     /** Epoch-ms timestamp when KMS first became unavailable; 0 = currently available. */
     private final AtomicLong kmsUnavailableSince = new AtomicLong(0L);
@@ -108,6 +117,15 @@ public class KeyManager implements IKeyManager {
         this.dekMetadataStore = new ConcurrentHashMap<>();
         this.kekMetadataStore = new ConcurrentHashMap<>();
     }
+
+    /**
+     * Sets the optional {@link EncryptionMetrics} for cache hit/miss tracking.
+     *
+     * @param encryptionMetrics the metrics instance, or {@code null} to disable tracking
+     */
+    public void setEncryptionMetrics(@Nullable EncryptionMetrics encryptionMetrics) {
+        this.encryptionMetrics = encryptionMetrics;
+    }
     
     @Override
     public Result<DEKWithMetadata, KeyError> getActiveDEK(BoundedContext context) {
@@ -133,11 +151,28 @@ public class KeyManager implements IKeyManager {
         // Check cache first
         var cachedDEK = dekCache.get(keyId);
         if (cachedDEK.isPresent()) {
+            DEKWithMetadata cached = cachedDEK.get();
+            // Defense-in-depth: verify environment even on cache hit (Requirement 17.5, 17.6)
+            if (cached.getEnvironment() != environment) {
+                String errorMsg = String.format(
+                    "Environment mismatch: cached DEK is for %s but current environment is %s",
+                    cached.getEnvironment(), environment
+                );
+                logSecurityEvent("ENVIRONMENT_MISMATCH", keyId, errorMsg);
+                dekCache.invalidate(keyId);
+                return Result.failure(KeyError.of("ENVIRONMENT_MISMATCH", errorMsg));
+            }
             logKeyAccess(keyId, "CACHE_HIT", true);
-            return Result.success(cachedDEK.get());
+            if (encryptionMetrics != null) {
+                encryptionMetrics.recordCacheHit();
+            }
+            return Result.success(cached);
         }
         
         logKeyAccess(keyId, "CACHE_MISS", true);
+        if (encryptionMetrics != null) {
+            encryptionMetrics.recordCacheMiss();
+        }
         
         // Cache miss - retrieve from KMS
         return retrieveDEKFromKMS(keyId);
@@ -245,8 +280,11 @@ public class KeyManager implements IKeyManager {
         
         EncryptedDEK encryptedDEK = encryptResult.getValue().orElseThrow();
         
-        // Generate new DEK ID
-        UUID newDEKId = UUID.randomUUID();
+        // Generate new DEK ID using environment-scoped namespace format:
+        // {environment}.{bounded_context}.dek.context.{uuid}
+        UUID newDEKUUID = UUID.randomUUID();
+        UUID newDEKId = newDEKUUID;
+        String dekNamespace = KeyNamespace.forContextDEK(environment, context, newDEKUUID);
         
         // Store DEK metadata
         DEKMetadata metadata = new DEKMetadata(
@@ -260,7 +298,8 @@ public class KeyManager implements IKeyManager {
             KeyStatus.ACTIVE,
             0,
             0,
-            encryptedDEK
+            encryptedDEK,
+            dekNamespace
         );
         dekMetadataStore.put(newDEKId, metadata);
         
@@ -364,9 +403,10 @@ public class KeyManager implements IKeyManager {
             }
         }
         
-        // Store new KEK metadata
+        // Store new KEK metadata with environment-scoped namespace
+        String kekNamespace = KeyNamespace.forKEK(environment, context, newKEKId);
         kekMetadataStore.put(newKEKId, new KEKMetadata(
-            newKEKId, context, environment, Instant.now(), null, KeyStatus.ACTIVE
+            newKEKId, context, environment, Instant.now(), null, KeyStatus.ACTIVE, kekNamespace
         ));
         
         // Update active KEK ID for this context
@@ -406,45 +446,199 @@ public class KeyManager implements IKeyManager {
     public Result<DeletionCertificate, KeyError> deleteUserDEK(String userId, BoundedContext context) {
         Objects.requireNonNull(userId, "User ID cannot be null");
         Objects.requireNonNull(context, "Context cannot be null");
-        
-        // Find user-specific DEK (in a real implementation, this would query a database)
-        // For now, we'll create a placeholder implementation
-        UUID userDEKId = UUID.nameUUIDFromBytes((userId + context.name()).getBytes());
-        
-        // Remove from metadata store
-        dekMetadataStore.remove(userDEKId);
-        
-        // Invalidate from cache
+
+        // 1. Find the user-specific DEK by namespace pattern:
+        //    {environment}.{context}.dek.user.{userId}
+        String expectedNamespacePrefix = environment.name().toLowerCase() + "." +
+                context.name().toLowerCase() + "." + KeyNamespace.KEY_TYPE_DEK_USER + ".";
+
+        UUID userDEKId = null;
+        for (Map.Entry<UUID, DEKMetadata> entry : dekMetadataStore.entrySet()) {
+            DEKMetadata meta = entry.getValue();
+            if (meta.context == context
+                    && meta.environment == environment
+                    && meta.namespace != null
+                    && meta.namespace.startsWith(expectedNamespacePrefix)) {
+                // The namespace format is {env}.{ctx}.dek.user.{uuid}
+                // For user DEKs the UUID at the end encodes the userId
+                // Check that this DEK belongs to the requested user
+                String namespaceUserId = extractUserIdFromNamespace(meta.namespace);
+                if (userId.equals(namespaceUserId)) {
+                    userDEKId = entry.getKey();
+                    break;
+                }
+            }
+        }
+
+        if (userDEKId == null) {
+            return Result.failure(KeyError.of(
+                "USER_DEK_NOT_FOUND",
+                "No user-specific DEK found for userId: " + userId + " in context: " + context
+            ));
+        }
+
+        // 2. Delete the DEK from KMS
+        Result<Unit, KMSError> deleteResult = effectiveKmsClient().deleteDEK(userDEKId);
+        if (deleteResult.isFailure()) {
+            KMSError kmsError = deleteResult.getError().orElseThrow();
+            logger.error("Failed to delete user DEK from KMS: userId={}, context={}, keyId={}: {}",
+                    userId, context, userDEKId, kmsError.getMessage());
+            return Result.failure(KeyError.of(
+                "KMS_DELETE_FAILED",
+                "Failed to delete user DEK from KMS: " + kmsError.getMessage(),
+                new RuntimeException(kmsError.getMessage())
+            ));
+        }
+
+        // 3. Invalidate the DEK from cache (secure wipe)
         dekCache.invalidate(userDEKId);
-        
-        // Generate deletion certificate with signature
+
+        // 4. Remove from metadata store (prevents future retrieval)
+        UUID deletedKeyId = userDEKId;
+        dekMetadataStore.remove(deletedKeyId);
+
+        // Also remove from active DEK tracking if it was the active DEK
+        activeDEKIds.entrySet().removeIf(e -> deletedKeyId.equals(e.getValue()));
+
+        // 5. Verify deletion: attempt to retrieve the key and confirm it's gone
+        boolean verificationPassed = verifyDEKDeleted(deletedKeyId);
+        if (!verificationPassed) {
+            logger.warn("DEK deletion verification failed for userId={}, context={}, keyId={}",
+                    userId, context, deletedKeyId);
+            // Log a security event but still proceed — the KMS deletion was confirmed
+            logSecurityEvent("DEK_DELETION_VERIFICATION_FAILED", deletedKeyId,
+                    "DEK deletion verification failed for userId: " + userId);
+        }
+
+        // 6. Generate deletion certificate with HMAC-SHA256 signature
         Instant deletedAt = Instant.now();
-        String signature = generateDeletionSignature(userDEKId, userId, context, deletedAt);
-        
+        String signature = generateDeletionSignature(deletedKeyId, userId, context, deletedAt);
+
         DeletionCertificate certificate = DeletionCertificate.of(
-            userDEKId,
+            deletedKeyId,
             userId,
             context,
             deletedAt,
             signature
         );
-        
-        logger.info("User DEK deleted for user: {}, context: {}, key ID: {}", 
-                   userId, context, userDEKId);
-        
+
+        // 7. Log the deletion event
+        logDeletionEvent(deletedKeyId, userId, context, deletedAt);
+
+        logger.info("User DEK deleted for userId={}, context={}, keyId={}",
+                userId, context, deletedKeyId);
+
         return Result.success(certificate);
     }
-    
+
     /**
-     * Generates a signature for the deletion certificate.
+     * Extracts the userId from a user DEK namespace.
+     *
+     * <p>User DEK namespaces follow the format:
+     * {@code {environment}.{context}.dek.user.{userId}}
+     * where userId is the last segment after "dek.user."
      */
-    private String generateDeletionSignature(UUID keyId, String userId, 
-                                            BoundedContext context, Instant deletedAt) {
-        // In a real implementation, this would use HMAC-SHA256
-        String data = keyId + userId + context + deletedAt;
-        return "SIGNATURE:" + Integer.toHexString(data.hashCode());
+    private String extractUserIdFromNamespace(String namespace) {
+        // Format: {env}.{ctx}.dek.user.{userId}
+        // "dek.user." is the key type prefix; everything after it is the userId
+        String prefix = ".dek.user.";
+        int idx = namespace.indexOf(prefix);
+        if (idx < 0) {
+            return null;
+        }
+        return namespace.substring(idx + prefix.length());
     }
-    
+
+    /**
+     * Verifies that a DEK has been successfully deleted by confirming it is no
+     * longer present in the metadata store or cache.
+     *
+     * @return true if the DEK is confirmed deleted, false if it still appears accessible
+     */
+    private boolean verifyDEKDeleted(UUID keyId) {
+        // Verify it's not in the metadata store
+        if (dekMetadataStore.containsKey(keyId)) {
+            return false;
+        }
+        // Verify it's not in the cache
+        return dekCache.get(keyId).isEmpty();
+    }
+
+    /**
+     * Generates an HMAC-SHA256 signature for the deletion certificate.
+     *
+     * <p>The signature covers: keyId + userId + context + deletedAt
+     * using the blind index key as the HMAC key (or a fallback if not initialized).
+     */
+    private String generateDeletionSignature(UUID keyId, String userId,
+                                             BoundedContext context, Instant deletedAt) {
+        try {
+            String data = keyId.toString() + "|" + userId + "|" + context.name() + "|" + deletedAt.toString();
+            byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
+
+            // Use blind index key if available, otherwise use a deterministic fallback key
+            byte[] hmacKey = (blindIndexKey != null)
+                    ? Arrays.copyOf(blindIndexKey, blindIndexKey.length)
+                    : deriveSigningKey(keyId, userId);
+
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(hmacKey, "HmacSHA256"));
+            byte[] hmacBytes = mac.doFinal(dataBytes);
+
+            // Encode as hex string
+            StringBuilder sb = new StringBuilder(hmacBytes.length * 2);
+            for (byte b : hmacBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            // Fallback: use a simple hash-based signature (should not happen in practice)
+            logger.warn("HMAC-SHA256 not available for deletion certificate signature, using fallback");
+            String data = keyId + userId + context + deletedAt;
+            return "FALLBACK:" + Integer.toHexString(data.hashCode());
+        }
+    }
+
+    /**
+     * Derives a deterministic signing key from the keyId and userId when the
+     * blind index key is not available.
+     */
+    private byte[] deriveSigningKey(UUID keyId, String userId) {
+        // Derive a 32-byte key from keyId + userId using SHA-256
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            digest.update(keyId.toString().getBytes(StandardCharsets.UTF_8));
+            digest.update(userId.getBytes(StandardCharsets.UTF_8));
+            return digest.digest();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            // SHA-256 is always available on JVM
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    /**
+     * Logs a DEK deletion event for audit trail (Requirements 11.10).
+     */
+    private void logDeletionEvent(UUID keyId, String userId, BoundedContext context, Instant deletedAt) {
+        SecurityEvent event = SecurityEvent.builder()
+            .eventType("USER_DEK_DELETED")
+            .keyId(keyId)
+            .description("User DEK deleted for GDPR cryptographic erasure. userId=" + userId)
+            .timestamp(deletedAt)
+            .context(context)
+            .serviceIdentity("KeyManager")
+            .severity("CRITICAL")
+            .metadata(Map.of(
+                "userId", userId,
+                "deletedAt", deletedAt.toString(),
+                "gdprArticle", "17"
+            ))
+            .build();
+
+        auditLogger.logSecurityEvent(event);
+    }
+
     /**
      * Returns the effective KMS client: the circuit breaker when configured,
      * otherwise the raw kmsClient.
@@ -571,6 +765,71 @@ public class KeyManager implements IKeyManager {
     }
 
     /**
+     * Creates a user-specific DEK for per-user encryption (supports cryptographic erasure).
+     *
+     * <p>The DEK is stored with namespace: {@code {environment}.{context}.dek.user.{userId}}
+     *
+     * @param userId  the user ID for whom to create the DEK
+     * @param context the bounded context
+     * @return Result containing the new DEK's UUID, or KeyError if creation fails
+     */
+    public Result<UUID, KeyError> createUserDEK(String userId, BoundedContext context) {
+        Objects.requireNonNull(userId, "User ID cannot be null");
+        Objects.requireNonNull(context, "Context cannot be null");
+
+        UUID kekId = kekIds.get(context);
+        if (kekId == null) {
+            return Result.failure(KeyError.of(
+                "KEK_NOT_FOUND",
+                "No KEK found for context: " + context
+            ));
+        }
+
+        // Generate new DEK (256 bits = 32 bytes)
+        byte[] dekBytes = new byte[32];
+        secureRandom.nextBytes(dekBytes);
+        DEK newDEK = DEK.of(dekBytes);
+
+        // Encrypt DEK with KEK in KMS
+        Result<EncryptedDEK, KMSError> encryptResult = effectiveKmsClient().encryptDEK(newDEK, kekId);
+        if (encryptResult.isFailure()) {
+            KMSError kmsError = encryptResult.getError().orElseThrow();
+            return Result.failure(KeyError.of(
+                "KMS_ENCRYPTION_FAILED",
+                "Failed to encrypt user DEK with KMS: " + kmsError.getMessage(),
+                new RuntimeException(kmsError.getMessage())
+            ));
+        }
+
+        EncryptedDEK encryptedDEK = encryptResult.getValue().orElseThrow();
+        UUID newDEKId = UUID.randomUUID();
+
+        // Use user-scoped namespace: {environment}.{context}.dek.user.{userId}
+        String dekNamespace = environment.name().toLowerCase() + "." +
+                context.name().toLowerCase() + "." +
+                KeyNamespace.KEY_TYPE_DEK_USER + "." + userId;
+
+        DEKMetadata metadata = new DEKMetadata(
+            newDEKId,
+            kekId,
+            context,
+            environment,
+            EncryptionAlgorithm.AES_256_GCM,
+            Instant.now(),
+            null,
+            KeyStatus.ACTIVE,
+            0,
+            0,
+            encryptedDEK,
+            dekNamespace
+        );
+        dekMetadataStore.put(newDEKId, metadata);
+
+        logger.info("User DEK created for userId={}, context={}, keyId={}", userId, context, newDEKId);
+        return Result.success(newDEKId);
+    }
+
+    /**
      * Initializes a KEK for a bounded context.
      * This should be called during system setup.
      */
@@ -588,9 +847,10 @@ public class KeyManager implements IKeyManager {
         UUID kekId = generateResult.getValue().orElseThrow();
         kekIds.put(context, kekId);
         
-        // Store KEK metadata
+        // Store KEK metadata with environment-scoped namespace
+        String kekNamespace = KeyNamespace.forKEK(environment, context, kekId);
         kekMetadataStore.put(kekId, new KEKMetadata(
-            kekId, context, environment, Instant.now(), null, KeyStatus.ACTIVE
+            kekId, context, environment, Instant.now(), null, KeyStatus.ACTIVE, kekNamespace
         ));
         
         logger.info("KEK initialized for context: {}, KEK ID: {}", context, kekId);
@@ -621,7 +881,51 @@ public class KeyManager implements IKeyManager {
     }
 
     /**
+     * Returns the current environment this KeyManager is configured for.
+     *
+     * <p>Keys generated by this manager will be namespaced under this environment,
+     * ensuring isolation from other environments (Requirement 17.1, 17.2).
+     *
+     * @return the environment
+     */
+    public Environment getEnvironment() {
+        return environment;
+    }
+
+    /**
+     * Returns the namespace for a DEK by its key ID, or null if not found.
+     *
+     * <p>The namespace follows the format:
+     * {@code {environment}.{bounded_context}.{key_type}.{key_id}}
+     *
+     * @param keyId the DEK key ID
+     * @return the namespace string, or null if the DEK is not found
+     */
+    public String getDEKNamespace(UUID keyId) {
+        DEKMetadata metadata = dekMetadataStore.get(keyId);
+        return metadata != null ? metadata.namespace : null;
+    }
+
+    /**
+     * Returns the namespace for a KEK by its key ID, or null if not found.
+     *
+     * <p>The namespace follows the format:
+     * {@code {environment}.{bounded_context}.kek.{key_id}}
+     *
+     * @param keyId the KEK key ID
+     * @return the namespace string, or null if the KEK is not found
+     */
+    public String getKEKNamespace(UUID keyId) {
+        KEKMetadata metadata = kekMetadataStore.get(keyId);
+        return metadata != null ? metadata.namespace : null;
+    }
+
+    /**
      * Internal class to store DEK metadata.
+     *
+     * <p>The {@code namespace} field stores the key namespace in the format
+     * {@code {environment}.{bounded_context}.{key_type}.{key_id}}, satisfying
+     * Requirements 16.10 and 17.3.
      */
     private static class DEKMetadata {
         UUID keyId;
@@ -635,11 +939,13 @@ public class KeyManager implements IKeyManager {
         long encryptionCount;
         long bytesEncrypted;
         EncryptedDEK encryptedDEK;
+        /** Namespace identifier: {environment}.{bounded_context}.{key_type}.{key_id} */
+        String namespace;
         
         DEKMetadata(UUID keyId, UUID kekId, BoundedContext context, Environment environment,
                    EncryptionAlgorithm algorithm, Instant createdAt, Instant rotatedAt,
                    KeyStatus status, long encryptionCount, long bytesEncrypted,
-                   EncryptedDEK encryptedDEK) {
+                   EncryptedDEK encryptedDEK, String namespace) {
             this.keyId = keyId;
             this.kekId = kekId;
             this.context = context;
@@ -651,11 +957,16 @@ public class KeyManager implements IKeyManager {
             this.encryptionCount = encryptionCount;
             this.bytesEncrypted = bytesEncrypted;
             this.encryptedDEK = encryptedDEK;
+            this.namespace = namespace;
         }
     }
 
     /**
      * Internal class to store KEK metadata.
+     *
+     * <p>The {@code namespace} field stores the key namespace in the format
+     * {@code {environment}.{bounded_context}.kek.{key_id}}, satisfying
+     * Requirements 16.10 and 17.3.
      */
     private static class KEKMetadata {
         UUID keyId;
@@ -664,15 +975,18 @@ public class KeyManager implements IKeyManager {
         Instant createdAt;
         Instant rotatedAt;
         KeyStatus status;
+        /** Namespace identifier: {environment}.{bounded_context}.kek.{key_id} */
+        String namespace;
 
         KEKMetadata(UUID keyId, BoundedContext context, Environment environment,
-                    Instant createdAt, Instant rotatedAt, KeyStatus status) {
+                    Instant createdAt, Instant rotatedAt, KeyStatus status, String namespace) {
             this.keyId = keyId;
             this.context = context;
             this.environment = environment;
             this.createdAt = createdAt;
             this.rotatedAt = rotatedAt;
             this.status = status;
+            this.namespace = namespace;
         }
     }
 }

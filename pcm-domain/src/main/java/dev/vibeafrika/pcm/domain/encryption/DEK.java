@@ -2,6 +2,7 @@ package dev.vibeafrika.pcm.domain.encryption;
 
 import java.util.Arrays;
 import java.util.Objects;
+import dev.vibeafrika.pcm.domain.encryption.ConstantTime;
 
 /**
  * Value object representing a Data Encryption Key (DEK).
@@ -33,12 +34,15 @@ public final class DEK {
         Arrays.fill(keyMaterial, (byte) 0);
     }
 
+    /**
+     * Compares DEK key material in constant time to prevent timing side-channel attacks.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DEK dek = (DEK) o;
-        return Arrays.equals(keyMaterial, dek.keyMaterial);
+        return ConstantTime.equals(keyMaterial, dek.keyMaterial);
     }
 
     @Override

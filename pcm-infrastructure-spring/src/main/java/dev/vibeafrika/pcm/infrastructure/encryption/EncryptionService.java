@@ -9,9 +9,14 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of IEncryptionService using AES-256-GCM encryption.
@@ -29,6 +34,7 @@ import java.util.UUID;
  */
 public class EncryptionService implements IEncryptionService {
 
+    private static final Logger logger = LoggerFactory.getLogger(EncryptionService.class);
     private static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_TAG_LENGTH_BITS = 128; // 16 bytes
     private static final String SERVICE_IDENTITY = "EncryptionService";
@@ -47,6 +53,16 @@ public class EncryptionService implements IEncryptionService {
         this.blindIndexService = Objects.requireNonNull(blindIndexService, "BlindIndexService cannot be null");
         this.auditLogger = Objects.requireNonNull(auditLogger, "AuditLogger cannot be null");
         this.ivCounter = Objects.requireNonNull(ivCounter, "IVCounter cannot be null");
+
+        // Log the JCE provider being used for AES/GCM — AES-NI is used automatically
+        // by SunJCE on x86/x64 hardware that supports it.
+        try {
+            Cipher probe = Cipher.getInstance(CIPHER_TRANSFORMATION);
+            logger.info("AES/GCM cipher provider: {} (AES-NI used automatically when available)",
+                        probe.getProvider().getName());
+        } catch (Exception e) {
+            logger.warn("Could not probe AES/GCM cipher provider", e);
+        }
     }
 
     @Override
@@ -54,7 +70,6 @@ public class EncryptionService implements IEncryptionService {
         Objects.requireNonNull(plaintext, "Plaintext cannot be null");
         Objects.requireNonNull(context, "Context cannot be null");
 
-        Instant startTime = Instant.now();
         UUID keyId = null;
 
         try {
@@ -63,8 +78,8 @@ public class EncryptionService implements IEncryptionService {
             if (dekResult.isFailure()) {
                 KeyError keyError = dekResult.getError().orElseThrow();
                 EncryptionError error = EncryptionError.of(
-                    "KEY_UNAVAILABLE",
-                    "Failed to retrieve active DEK: " + keyError.getMessage(),
+                    EncryptionErrorCodes.KEY_UNAVAILABLE,
+                    "Encryption key is unavailable for context: " + context.name(),
                     keyError.getCause()
                 );
                 logEncryptionFailure(context, null, error);
@@ -79,10 +94,10 @@ public class EncryptionService implements IEncryptionService {
             Result<IV, IVCounterError> ivResult = ivCounter.generateIV(keyId);
             if (ivResult.isFailure()) {
                 IVCounterError ivError = ivResult.getError().orElseThrow();
-                EncryptionError error = EncryptionError.of(
-                    "IV_GENERATION_FAILED",
-                    "Failed to generate IV: " + ivError.getMessage()
-                );
+                EncryptionErrorCodes code = isCounterOverflow(ivError)
+                    ? EncryptionErrorCodes.COUNTER_OVERFLOW
+                    : EncryptionErrorCodes.IV_GENERATION_FAILED;
+                EncryptionError error = EncryptionError.of(code);
                 logEncryptionFailure(context, keyId, error);
                 return Result.failure(error);
             }
@@ -119,11 +134,7 @@ public class EncryptionService implements IEncryptionService {
             );
 
             if (formatResult.isFailure()) {
-                DecryptionError formatError = formatResult.getError().orElseThrow();
-                EncryptionError error = EncryptionError.of(
-                    "FORMAT_ERROR",
-                    "Failed to format ciphertext: " + formatError.getMessage()
-                );
+                EncryptionError error = EncryptionError.of(EncryptionErrorCodes.ENCRYPTION_FAILED);
                 logEncryptionFailure(context, keyId, error);
                 return Result.failure(error);
             }
@@ -137,8 +148,8 @@ public class EncryptionService implements IEncryptionService {
 
         } catch (Exception e) {
             EncryptionError error = EncryptionError.of(
-                "ENCRYPTION_FAILED",
-                "Unexpected error during encryption: " + e.getMessage(),
+                EncryptionErrorCodes.ENCRYPTION_FAILED,
+                EncryptionErrorCodes.ENCRYPTION_FAILED.getDefaultMessage(),
                 e
             );
             logEncryptionFailure(context, keyId, error);
@@ -151,7 +162,6 @@ public class EncryptionService implements IEncryptionService {
         Objects.requireNonNull(ciphertext, "Ciphertext cannot be null");
         Objects.requireNonNull(context, "Context cannot be null");
 
-        Instant startTime = Instant.now();
         UUID keyId = null;
 
         try {
@@ -170,19 +180,13 @@ public class EncryptionService implements IEncryptionService {
 
             // 2. Validate version and algorithm
             if (parsed.getVersion() != CiphertextFormat.VERSION_1) {
-                DecryptionError error = DecryptionError.of(
-                    "UNSUPPORTED_VERSION",
-                    "Unsupported ciphertext version: 0x" + String.format("%02X", parsed.getVersion())
-                );
+                DecryptionError error = DecryptionError.of(EncryptionErrorCodes.UNSUPPORTED_VERSION);
                 logDecryptionFailure(context, keyId, error);
                 return Result.failure(error);
             }
 
             if (parsed.getAlgorithm() != EncryptionAlgorithm.AES_256_GCM) {
-                DecryptionError error = DecryptionError.of(
-                    "UNSUPPORTED_ALGORITHM",
-                    "Unsupported algorithm: " + parsed.getAlgorithm()
-                );
+                DecryptionError error = DecryptionError.of(EncryptionErrorCodes.UNSUPPORTED_ALGORITHM);
                 logDecryptionFailure(context, keyId, error);
                 return Result.failure(error);
             }
@@ -192,8 +196,8 @@ public class EncryptionService implements IEncryptionService {
             if (dekResult.isFailure()) {
                 KeyError keyError = dekResult.getError().orElseThrow();
                 DecryptionError error = DecryptionError.of(
-                    "KEY_NOT_FOUND",
-                    "Failed to retrieve DEK: " + keyError.getMessage(),
+                    EncryptionErrorCodes.KEY_NOT_FOUND,
+                    EncryptionErrorCodes.KEY_NOT_FOUND.getDefaultMessage(),
                     keyError.getCause()
                 );
                 logDecryptionFailure(context, keyId, error);
@@ -232,8 +236,8 @@ public class EncryptionService implements IEncryptionService {
 
         } catch (Exception e) {
             DecryptionError error = DecryptionError.of(
-                "DECRYPTION_FAILED",
-                "Unexpected error during decryption: " + e.getMessage(),
+                EncryptionErrorCodes.DECRYPTION_FAILED,
+                EncryptionErrorCodes.DECRYPTION_FAILED.getDefaultMessage(),
                 e
             );
             logDecryptionFailure(context, keyId, error);
@@ -259,8 +263,8 @@ public class EncryptionService implements IEncryptionService {
             if (dekResult.isFailure()) {
                 KeyError keyError = dekResult.getError().orElseThrow();
                 EncryptionError error = EncryptionError.of(
-                    "KEY_UNAVAILABLE",
-                    "Failed to retrieve active DEK for batch: " + keyError.getMessage(),
+                    EncryptionErrorCodes.KEY_UNAVAILABLE,
+                    "Encryption key is unavailable for context: " + context.name(),
                     keyError.getCause()
                 );
                 return Result.failure(error);
@@ -276,20 +280,17 @@ public class EncryptionService implements IEncryptionService {
             // Encrypt each plaintext with the same DEK but unique IVs
             for (String plaintext : plaintexts) {
                 if (plaintext == null) {
-                    return Result.failure(EncryptionError.of(
-                        "INVALID_PLAINTEXT",
-                        "Plaintext in batch cannot be null"
-                    ));
+                    return Result.failure(EncryptionError.of(EncryptionErrorCodes.INVALID_PLAINTEXT));
                 }
 
                 // Generate unique IV for this item
                 Result<IV, IVCounterError> ivResult = ivCounter.generateIV(keyId);
                 if (ivResult.isFailure()) {
                     IVCounterError ivError = ivResult.getError().orElseThrow();
-                    return Result.failure(EncryptionError.of(
-                        "IV_GENERATION_FAILED",
-                        "Failed to generate IV in batch: " + ivError.getMessage()
-                    ));
+                    EncryptionErrorCodes code = isCounterOverflow(ivError)
+                        ? EncryptionErrorCodes.COUNTER_OVERFLOW
+                        : EncryptionErrorCodes.IV_GENERATION_FAILED;
+                    return Result.failure(EncryptionError.of(code));
                 }
 
                 IV iv = ivResult.getValue().orElseThrow();
@@ -319,11 +320,7 @@ public class EncryptionService implements IEncryptionService {
                 );
 
                 if (formatResult.isFailure()) {
-                    DecryptionError formatError = formatResult.getError().orElseThrow();
-                    return Result.failure(EncryptionError.of(
-                        "FORMAT_ERROR",
-                        "Failed to format ciphertext in batch: " + formatError.getMessage()
-                    ));
+                    return Result.failure(EncryptionError.of(EncryptionErrorCodes.ENCRYPTION_FAILED));
                 }
 
                 ciphertexts.add(formatResult.getValue().orElseThrow());
@@ -335,10 +332,10 @@ public class EncryptionService implements IEncryptionService {
             return Result.success(ciphertexts);
 
         } catch (Exception e) {
+            // Do not expose e.getMessage() – it may contain sensitive data (req 8.6)
             return Result.failure(EncryptionError.of(
-                "BATCH_ENCRYPTION_FAILED",
-                "Unexpected error during batch encryption: " + e.getMessage(),
-                e
+                EncryptionErrorCodes.ENCRYPTION_FAILED,
+                EncryptionErrorCodes.ENCRYPTION_FAILED.getDefaultMessage()
             ));
         }
     }
@@ -356,18 +353,66 @@ public class EncryptionService implements IEncryptionService {
         }
 
         try {
-            List<String> plaintexts = new ArrayList<>(ciphertexts.size());
-
-            // Decrypt each ciphertext (may use different DEKs due to rotation)
-            for (Ciphertext ciphertext : ciphertexts) {
-                if (ciphertext == null) {
+            // 1. Parse all ciphertexts first to extract key IDs
+            List<CiphertextFormat.ParsedCiphertext> parsed = new ArrayList<>(ciphertexts.size());
+            for (Ciphertext ct : ciphertexts) {
+                if (ct == null) {
                     return Result.failure(DecryptionError.of(
                         "INVALID_CIPHERTEXT",
                         "Ciphertext in batch cannot be null"
                     ));
                 }
+                Result<CiphertextFormat.ParsedCiphertext, DecryptionError> parseResult =
+                    CiphertextFormat.parse(ct);
+                if (parseResult.isFailure()) {
+                    return Result.failure(parseResult.getError().orElseThrow());
+                }
+                CiphertextFormat.ParsedCiphertext p = parseResult.getValue().orElseThrow();
+                // Validate version and algorithm eagerly
+                if (p.getVersion() != CiphertextFormat.VERSION_1) {
+                    return Result.failure(DecryptionError.of(EncryptionErrorCodes.UNSUPPORTED_VERSION));
+                }
+                if (p.getAlgorithm() != EncryptionAlgorithm.AES_256_GCM) {
+                    return Result.failure(DecryptionError.of(EncryptionErrorCodes.UNSUPPORTED_ALGORITHM));
+                }
+                parsed.add(p);
+            }
 
-                Result<String, DecryptionError> decryptResult = decrypt(ciphertext, context);
+            // 2. Pre-fetch unique DEKs — O(k) KMS calls where k = number of unique key IDs
+            Map<UUID, DEKWithMetadata> dekMap = new LinkedHashMap<>();
+            for (CiphertextFormat.ParsedCiphertext p : parsed) {
+                UUID keyId = p.getKeyId();
+                if (!dekMap.containsKey(keyId)) {
+                    Result<DEKWithMetadata, KeyError> dekResult = keyManager.getDEK(keyId);
+                    if (dekResult.isFailure()) {
+                        KeyError keyError = dekResult.getError().orElseThrow();
+                        return Result.failure(DecryptionError.of(
+                            EncryptionErrorCodes.KEY_NOT_FOUND,
+                            EncryptionErrorCodes.KEY_NOT_FOUND.getDefaultMessage(),
+                            keyError.getCause()
+                        ));
+                    }
+                    dekMap.put(keyId, dekResult.getValue().orElseThrow());
+                }
+            }
+
+            // 3. Decrypt each ciphertext using pre-fetched DEKs (no additional KMS calls)
+            List<String> plaintexts = new ArrayList<>(ciphertexts.size());
+            for (CiphertextFormat.ParsedCiphertext p : parsed) {
+                DEKWithMetadata dekMetadata = dekMap.get(p.getKeyId());
+                DEK dek = dekMetadata.getDek();
+                byte[] aad = generateAAD(context, p.getKeyId());
+
+                Result<String, DecryptionError> decryptResult = performDecryption(
+                    p.getCiphertext(),
+                    p.getAuthTag(),
+                    dek,
+                    IV.of(p.getIv()),
+                    aad,
+                    context,
+                    p.getKeyId()
+                );
+
                 if (decryptResult.isFailure()) {
                     return Result.failure(decryptResult.getError().orElseThrow());
                 }
@@ -375,13 +420,16 @@ public class EncryptionService implements IEncryptionService {
                 plaintexts.add(decryptResult.getValue().orElseThrow());
             }
 
+            // 4. Log a single batch decryption event
+            logDecryptionSuccess(context, null, ciphertexts.size());
+
             return Result.success(plaintexts);
 
         } catch (Exception e) {
+            // Do not expose e.getMessage() – it may contain sensitive data (req 8.6)
             return Result.failure(DecryptionError.of(
-                "BATCH_DECRYPTION_FAILED",
-                "Unexpected error during batch decryption: " + e.getMessage(),
-                e
+                EncryptionErrorCodes.DECRYPTION_FAILED,
+                EncryptionErrorCodes.DECRYPTION_FAILED.getDefaultMessage()
             ));
         }
     }
@@ -391,6 +439,42 @@ public class EncryptionService implements IEncryptionService {
         Objects.requireNonNull(plaintext, "Plaintext cannot be null");
         Objects.requireNonNull(recordSalt, "Record salt cannot be null");
         return blindIndexService.generateBlindIndex(plaintext, recordSalt);
+    }
+
+    @Override
+    public Result<Ciphertext, EncryptionError> shareAcrossContexts(
+            Ciphertext ciphertext,
+            BoundedContext sourceContext,
+            BoundedContext targetContext) {
+
+        Objects.requireNonNull(ciphertext, "Ciphertext cannot be null");
+        Objects.requireNonNull(sourceContext, "Source context cannot be null");
+        Objects.requireNonNull(targetContext, "Target context cannot be null");
+
+        // 1. Decrypt with source context DEK
+        Result<String, DecryptionError> decryptResult = decrypt(ciphertext, sourceContext);
+        if (decryptResult.isFailure()) {
+            DecryptionError decryptionError = decryptResult.getError().orElseThrow();
+            return Result.failure(EncryptionError.of(
+                EncryptionErrorCodes.ENCRYPTION_FAILED,
+                "Cross-context data sharing failed during decryption from context: " + sourceContext.name(),
+                decryptionError.getCause()
+            ));
+        }
+
+        String plaintext = decryptResult.getValue().orElseThrow();
+
+        // 2. Re-encrypt with target context DEK
+        Result<Ciphertext, EncryptionError> encryptResult = encrypt(plaintext, targetContext);
+        if (encryptResult.isFailure()) {
+            return Result.failure(EncryptionError.of(
+                EncryptionErrorCodes.ENCRYPTION_FAILED,
+                "Cross-context data sharing failed during re-encryption to context: " + targetContext.name(),
+                encryptResult.getError().orElseThrow().getCause()
+            ));
+        }
+
+        return encryptResult;
     }
 
     /**
@@ -434,10 +518,10 @@ public class EncryptionService implements IEncryptionService {
             return Result.success(new EncryptedData(ciphertext, authTag));
             
         } catch (Exception e) {
+            // Do not expose e.getMessage() – it may contain sensitive data
             return Result.failure(EncryptionError.of(
-                "ENCRYPTION_FAILED",
-                "AES-256-GCM encryption failed: " + e.getMessage(),
-                e
+                EncryptionErrorCodes.ENCRYPTION_FAILED,
+                EncryptionErrorCodes.ENCRYPTION_FAILED.getDefaultMessage()
             ));
         }
     }
@@ -482,19 +566,27 @@ public class EncryptionService implements IEncryptionService {
             return Result.success(plaintext);
             
         } catch (javax.crypto.AEADBadTagException e) {
-            // Authentication tag verification failed - tampering detected
+            // Authentication tag verification failed – data has been tampered with 
             logTamperingDetected(context, keyId);
-            return Result.failure(DecryptionError.of(
-                "TAMPERING_DETECTED",
-                "Authentication tag verification failed - data may have been tampered with"
-            ));
+            return Result.failure(DecryptionError.of(EncryptionErrorCodes.TAMPERING_DETECTED));
+        } catch (javax.crypto.BadPaddingException e) {
+            // In GCM mode BadPaddingException also signals authentication failure 
+            logTamperingDetected(context, keyId);
+            return Result.failure(DecryptionError.of(EncryptionErrorCodes.TAMPERING_DETECTED));
         } catch (Exception e) {
+            // Generic failure – do not expose e.getMessage() to callers 
             return Result.failure(DecryptionError.of(
-                "DECRYPTION_FAILED",
-                "AES-256-GCM decryption failed: " + e.getMessage(),
-                e
+                EncryptionErrorCodes.DECRYPTION_FAILED,
+                EncryptionErrorCodes.DECRYPTION_FAILED.getDefaultMessage()
             ));
         }
+    }
+
+    /**
+     * Determines whether an IVCounterError represents a counter overflow condition.
+     */
+    private boolean isCounterOverflow(IVCounterError error) {
+        return error != null && "IV_COUNTER_OVERFLOW".equals(error.getCode());
     }
 
     /**
@@ -549,12 +641,20 @@ public class EncryptionService implements IEncryptionService {
      * Logs successful decryption operation.
      */
     private void logDecryptionSuccess(BoundedContext context, UUID keyId) {
+        logDecryptionSuccess(context, keyId, 1);
+    }
+
+    /**
+     * Logs successful decryption operation with count (used for batch operations).
+     */
+    private void logDecryptionSuccess(BoundedContext context, UUID keyId, int count) {
         DecryptionEvent event = DecryptionEvent.builder()
             .timestamp(Instant.now())
             .context(context)
             .serviceIdentity(SERVICE_IDENTITY)
             .keyId(keyId)
             .success(true)
+            .metadata(count > 1 ? java.util.Map.of("batchSize", count) : java.util.Map.of())
             .build();
         
         auditLogger.logDecryption(event);

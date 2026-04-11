@@ -8,6 +8,7 @@ import dev.vibeafrika.pcm.domain.encryption.IKMSClient;
 import dev.vibeafrika.pcm.domain.encryption.KMSError;
 import dev.vibeafrika.pcm.domain.encryption.KMSHealth;
 import dev.vibeafrika.pcm.domain.encryption.Result;
+import dev.vibeafrika.pcm.domain.encryption.Unit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,6 +27,7 @@ import software.amazon.awssdk.services.kms.model.EncryptResponse;
 import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.KmsException;
+import software.amazon.awssdk.services.kms.model.ScheduleKeyDeletionRequest;
 import software.amazon.awssdk.services.kms.model.Tag;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -221,6 +223,38 @@ public class AwsKmsClient implements IKMSClient {
             logger.error("Unexpected error generating KEK for context={}, env={}", context, environment, e);
             return Result.failure(KMSError.of("KMS_UNAVAILABLE",
                     "AWS KMS unavailable during KEK generation", e));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Schedules the DEK for deletion in AWS KMS with the minimum waiting period
+     * of 7 days (the minimum AWS KMS allows). The key becomes permanently
+     * unrecoverable after the waiting period.
+     */
+    @Override
+    public Result<Unit, KMSError> deleteDEK(UUID keyId) {
+        Objects.requireNonNull(keyId, "Key ID cannot be null");
+
+        try {
+            ScheduleKeyDeletionRequest request = ScheduleKeyDeletionRequest.builder()
+                    .keyId(keyId.toString())
+                    .pendingWindowInDays(7) // minimum AWS KMS waiting period
+                    .build();
+
+            kmsClient.scheduleKeyDeletion(request);
+            logger.info("Scheduled DEK deletion in AWS KMS: keyId={}", keyId);
+            return Result.success(Unit.unit());
+
+        } catch (KmsException e) {
+            logger.error("AWS KMS scheduleKeyDeletion failed for keyId {}: {}", keyId, e.getMessage());
+            return Result.failure(KMSError.of("KMS_DELETE_FAILED",
+                    "Failed to delete DEK from AWS KMS: " + e.awsErrorDetails().errorCode(), e));
+        } catch (Exception e) {
+            logger.error("Unexpected error deleting DEK from AWS KMS: keyId={}", keyId, e);
+            return Result.failure(KMSError.of("KMS_UNAVAILABLE",
+                    "AWS KMS unavailable during DEK deletion", e));
         }
     }
 

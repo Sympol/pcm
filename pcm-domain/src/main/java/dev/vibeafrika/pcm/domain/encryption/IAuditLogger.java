@@ -177,4 +177,26 @@ public interface IAuditLogger {
      * @return Result containing void on success, or AuditError if logging fails
      */
     Result<Void, AuditError> logKeyAccess(KeyAccessEvent event);
+
+    /**
+     * Logs an audit log access operation.
+     *
+     * <p>This method records when audit logs are read or accessed, including:
+     * <ul>
+     *   <li>Timestamp of the access</li>
+     *   <li>Bounded context where access occurred</li>
+     *   <li>Service identity of the system performing the access</li>
+     *   <li>Accessor identity (who accessed the audit logs)</li>
+     *   <li>Description of what was accessed</li>
+     *   <li>Success status</li>
+     *   <li>Error code if operation failed</li>
+     * </ul>
+     *
+     * <p>WHEN audit log access occurs, THE Audit_Logger SHALL
+     * log the access event with accessor identity and timestamp.
+     *
+     * @param event the audit log access event containing accessor identity and metadata
+     * @return Result containing void on success, or AuditError if logging fails
+     */
+    Result<Void, AuditError> logAuditLogAccess(AuditLogAccessEvent event);
 }

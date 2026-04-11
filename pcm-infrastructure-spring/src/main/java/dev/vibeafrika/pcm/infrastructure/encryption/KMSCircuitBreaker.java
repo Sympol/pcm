@@ -125,6 +125,25 @@ public class KMSCircuitBreaker implements IKMSClient {
      * <p>Rejected when the circuit is OPEN (read-only mode).
      */
     @Override
+    public Result<Unit, KMSError> deleteDEK(UUID keyId) {
+        CircuitBreakerState current = evaluateState();
+        if (current == CircuitBreakerState.OPEN) {
+            logger.warn("Circuit breaker OPEN: rejecting deleteDEK call");
+            return Result.failure(KMSError.of("KMS_UNAVAILABLE",
+                    "KMS is unavailable: circuit breaker is open"));
+        }
+
+        Result<Unit, KMSError> result = activeClient().deleteDEK(keyId);
+        handleResult(result.isSuccess());
+        return result;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Rejected when the circuit is OPEN (read-only mode).
+     */
+    @Override
     public Result<UUID, KMSError> generateKEK(BoundedContext context, Environment environment) {
         CircuitBreakerState current = evaluateState();
         if (current == CircuitBreakerState.OPEN) {

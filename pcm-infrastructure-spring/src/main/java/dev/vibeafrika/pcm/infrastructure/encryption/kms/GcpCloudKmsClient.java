@@ -8,6 +8,7 @@ import com.google.cloud.kms.v1.CryptoKeyVersionTemplate;
 import com.google.cloud.kms.v1.CryptoKeyName;
 import com.google.cloud.kms.v1.DecryptRequest;
 import com.google.cloud.kms.v1.DecryptResponse;
+import com.google.cloud.kms.v1.DestroyCryptoKeyVersionRequest;
 import com.google.cloud.kms.v1.EncryptRequest;
 import com.google.cloud.kms.v1.EncryptResponse;
 import com.google.cloud.kms.v1.GetCryptoKeyRequest;
@@ -26,6 +27,7 @@ import dev.vibeafrika.pcm.domain.encryption.IKMSClient;
 import dev.vibeafrika.pcm.domain.encryption.KMSError;
 import dev.vibeafrika.pcm.domain.encryption.KMSHealth;
 import dev.vibeafrika.pcm.domain.encryption.Result;
+import dev.vibeafrika.pcm.domain.encryption.Unit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -237,6 +239,37 @@ public class GcpCloudKmsClient implements IKMSClient {
                     context, environment, e.getMessage());
             return Result.failure(KMSError.of("KMS_KEY_GENERATION_FAILED",
                     "Failed to generate KEK in GCP Cloud KMS", e));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Destroys the primary version of the crypto key in GCP Cloud KMS.
+     * GCP KMS does not support deleting keys directly; instead, key versions
+     * are destroyed, making the key material permanently unrecoverable.
+     */
+    @Override
+    public Result<Unit, KMSError> deleteDEK(UUID keyId) {
+        Objects.requireNonNull(keyId, "Key ID cannot be null");
+
+        try {
+            String cryptoKeyName = buildCryptoKeyName(keyId);
+            // Destroy the primary version (version 1) of the crypto key
+            String versionName = cryptoKeyName + "/cryptoKeyVersions/1";
+
+            DestroyCryptoKeyVersionRequest request = DestroyCryptoKeyVersionRequest.newBuilder()
+                    .setName(versionName)
+                    .build();
+
+            kmsClient.destroyCryptoKeyVersion(request);
+            logger.info("Destroyed DEK version in GCP Cloud KMS: keyId={}", keyId);
+            return Result.success(Unit.unit());
+
+        } catch (Exception e) {
+            logger.error("GCP Cloud KMS destroyCryptoKeyVersion failed for keyId {}: {}", keyId, e.getMessage());
+            return Result.failure(KMSError.of("KMS_DELETE_FAILED",
+                    "Failed to delete DEK from GCP Cloud KMS", e));
         }
     }
 
