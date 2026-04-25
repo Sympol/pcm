@@ -13,8 +13,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Property-based test for domain entities being annotation-free.
  * 
- * **Validates: Requirements 2.1, 2.2, 2.3**
- * 
  * Feature: framework-agnostic-domain, Property 2: Domain Entities Are Annotation-Free
  * 
  * This test verifies that:
@@ -46,7 +44,7 @@ class DomainEntitiesAnnotationFreePropertyTest {
             .orShould().beAnnotatedWith("jakarta.persistence.OneToMany")
             .orShould().beAnnotatedWith("jakarta.persistence.ManyToMany")
             .orShould().beAnnotatedWith("jakarta.persistence.OneToOne")
-            .because("Domain entities must not contain JPA annotations (Requirement 2.1)");
+            .because("Domain entities must not contain JPA annotations");
 
         rule.check(domainClasses);
     }
@@ -60,7 +58,7 @@ class DomainEntitiesAnnotationFreePropertyTest {
             .orShould().beAnnotatedWith("org.springframework.stereotype.Repository")
             .orShould().beAnnotatedWith("org.springframework.beans.factory.annotation.Autowired")
             .orShould().beAnnotatedWith("org.springframework.context.annotation.Bean")
-            .because("Domain entities must not contain Spring annotations (Requirement 2.2)");
+            .because("Domain entities must not contain Spring annotations");
 
         rule.check(domainClasses);
     }
@@ -77,7 +75,7 @@ class DomainEntitiesAnnotationFreePropertyTest {
             .orShould().beAnnotatedWith("jakarta.validation.constraints.Min")
             .orShould().beAnnotatedWith("jakarta.validation.constraints.Max")
             .orShould().beAnnotatedWith("jakarta.validation.constraints.Pattern")
-            .because("Domain entities must not contain validation framework annotations (Requirement 2.3)");
+            .because("Domain entities must not contain validation framework annotations");
 
         rule.check(domainClasses);
     }
@@ -91,7 +89,7 @@ class DomainEntitiesAnnotationFreePropertyTest {
             .orShould().beAnnotatedWith("org.hibernate.annotations.Where")
             .orShould().beAnnotatedWith("org.hibernate.annotations.CreationTimestamp")
             .orShould().beAnnotatedWith("org.hibernate.annotations.UpdateTimestamp")
-            .because("Domain entities must not contain Hibernate-specific annotations (Requirement 2.1)");
+            .because("Domain entities must not contain Hibernate-specific annotations");
 
         rule.check(domainClasses);
     }
@@ -104,7 +102,7 @@ class DomainEntitiesAnnotationFreePropertyTest {
             .orShould().beAnnotatedWith("org.springframework.data.annotation.LastModifiedDate")
             .orShould().beAnnotatedWith("org.springframework.data.annotation.CreatedBy")
             .orShould().beAnnotatedWith("org.springframework.data.annotation.LastModifiedBy")
-            .because("Domain entities must not contain Spring Data annotations (Requirement 2.2)");
+            .because("Domain entities must not contain Spring Data annotations");
 
         rule.check(domainClasses);
     }

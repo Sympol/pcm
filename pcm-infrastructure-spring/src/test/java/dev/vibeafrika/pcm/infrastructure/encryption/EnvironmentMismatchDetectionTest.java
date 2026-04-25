@@ -297,7 +297,7 @@ class EnvironmentMismatchDetectionTest {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Requirement 17.5: Correct environment passes validation
+    // Correct environment passes validation
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
@@ -325,7 +325,7 @@ class EnvironmentMismatchDetectionTest {
         Result<DEKWithMetadata, KeyError> result = prodManager.getDEK(keyId);
 
         assertTrue(result.isSuccess(),
-            "getDEK must succeed when cached DEK environment matches current environment (Requirement 17.5)");
+            "getDEK must succeed when cached DEK environment matches current environment");
         assertEquals(Environment.PROD, result.getValue().orElseThrow().getEnvironment());
     }
 

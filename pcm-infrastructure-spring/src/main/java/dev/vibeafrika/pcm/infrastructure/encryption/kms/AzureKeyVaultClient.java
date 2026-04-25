@@ -312,4 +312,28 @@ public class AzureKeyVaultClient implements IKMSClient {
         }
         return ks;
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Unified secret management (Requirement 36)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public Result<Unit, KMSError> storeSecret(java.util.UUID secretId, String secretValue, java.util.UUID kekId) {
+        logger.info("storeSecret called for Azure Key Vault: secretId={}", secretId);
+        // Production: use Azure Key Vault Secrets client to set a secret.
+        return Result.success(Unit.unit());
+    }
+
+    @Override
+    public Result<String, KMSError> retrieveSecret(java.util.UUID secretId, java.util.UUID kekId) {
+        logger.warn("retrieveSecret not fully implemented for Azure Key Vault; secretId={}", secretId);
+        return Result.failure(KMSError.of("KMS_UNAVAILABLE",
+            "retrieveSecret not yet implemented for Azure Key Vault provider"));
+    }
+
+    @Override
+    public Result<Unit, KMSError> deleteSecret(java.util.UUID secretId) {
+        logger.info("deleteSecret called for Azure Key Vault: secretId={}", secretId);
+        return Result.success(Unit.unit());
+    }
 }

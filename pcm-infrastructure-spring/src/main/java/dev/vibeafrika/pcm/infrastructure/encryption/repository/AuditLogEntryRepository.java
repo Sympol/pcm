@@ -15,7 +15,7 @@ import java.time.Instant;
  * The inherited {@code deleteById}, {@code delete}, {@code deleteAll}, and
  * {@code deleteAllById} methods from {@link JpaRepository} are overridden to
  * throw {@link UnsupportedOperationException}, enforcing the append-only
- * guarantee required by Requirement 7.9.
+ * guarantee.
  *
  * <p>Callers must use {@link #save(Object)} to append new entries and the
  * {@code find*} methods to query them.

@@ -8,6 +8,8 @@ import io.github.sympol.pure.asserts.AssertionException;
 import io.github.sympol.pure.asserts.MissingMandatoryValueException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -105,9 +107,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConsentRevokedException.class)
     public ProblemDetail handleConsentRevoked(ConsentRevokedException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.GONE, ex.getMessage());
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/consent-revoked"));
-        problemDetail.setTitle("Consent Revoked");
+        problemDetail.setTitle("Consent Already Revoked");
         problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
@@ -118,16 +120,6 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/invalid-consent-purpose"));
         problemDetail.setTitle("Invalid Consent Purpose");
-        problemDetail.setInstance(requestUri(request));
-        problemDetail.setProperty("timestamp", Instant.now());
-        return problemDetail;
-    }
-
-    @ExceptionHandler(TCFValidationException.class)
-    public ProblemDetail handleTCFValidation(TCFValidationException ex, WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/tcf-validation-error"));
-        problemDetail.setTitle("IAB TCF Validation Error");
         problemDetail.setInstance(requestUri(request));
         problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
@@ -220,6 +212,44 @@ public class GlobalExceptionHandler {
             ex.parameters().forEach(problemDetail::setProperty);
         }
 
+        return problemDetail;
+    }
+
+    // ========== Spring MVC Exceptions ==========
+
+    /**
+     * Handler for missing required request headers (e.g., X-Tenant-Id).
+     * Returns 400 BAD_REQUEST instead of 500.
+     */
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ProblemDetail handleMissingRequestHeader(MissingRequestHeaderException ex, WebRequest request) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, "Required header '" + ex.getHeaderName() + "' is missing");
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/missing-header"));
+        problemDetail.setTitle("Missing Required Header");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
+        problemDetail.setProperty("headerName", ex.getHeaderName());
+        return problemDetail;
+    }
+
+    /**
+     * Handler for unreadable HTTP message bodies (e.g., JSON parse errors from DTO validation).
+     * Returns 400 BAD_REQUEST instead of 500.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail handleHttpMessageNotReadable(HttpMessageNotReadableException ex, WebRequest request) {
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Request body is not readable";
+        // Extract the root cause message if it's an IllegalArgumentException from DTO validation
+        Throwable cause = ex.getCause();
+        if (cause != null && cause.getMessage() != null) {
+            detail = cause.getMessage();
+        }
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problemDetail.setType(URI.create(PROBLEM_BASE_URL + "/invalid-request-body"));
+        problemDetail.setTitle("Invalid Request Body");
+        problemDetail.setInstance(requestUri(request));
+        problemDetail.setProperty("timestamp", Instant.now());
         return problemDetail;
     }
 

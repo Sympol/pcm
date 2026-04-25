@@ -38,11 +38,6 @@ public class ConsentUseCaseConfiguration {
     }
 
     @Bean
-    public ProcessTCFConsentUseCase processTCFConsentUseCase(ConsentRepository consentRepository) {
-        return new ProcessTCFConsentUseCase(consentRepository);
-    }
-
-    @Bean
     public RevokeConsentsForProfileUseCase revokeConsentsForProfileUseCase(
             ConsentRepository consentRepository,
             EventPublisher eventPublisher) {

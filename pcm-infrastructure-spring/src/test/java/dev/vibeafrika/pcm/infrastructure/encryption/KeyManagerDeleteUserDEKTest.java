@@ -172,7 +172,7 @@ class KeyManagerDeleteUserDEKTest {
         keyManager.deleteUserDEK(userId, CONTEXT);
 
         assertFalse(dekCache.get(userDEKId).isPresent(),
-                "DEK must be evicted from cache after deletion (Req 11.11)");
+                "DEK must be evicted from cache after deletion");
     }
 
     /**
@@ -191,7 +191,7 @@ class KeyManagerDeleteUserDEKTest {
         // After deletion, getDEK should fail because metadata is removed
         Result<DEKWithMetadata, KeyError> getDEKResult = keyManager.getDEK(userDEKId);
         assertTrue(getDEKResult.isFailure(),
-                "getDEK must fail after user DEK deletion (data cannot be decrypted - Req 11.11)");
+                "getDEK must fail after user DEK deletion (data cannot be decrypted)");
         assertEquals("KEY_NOT_FOUND", getDEKResult.getError().orElseThrow().getCode());
     }
 

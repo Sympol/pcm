@@ -14,8 +14,5 @@ public record UpdateSegmentRequest(
     Map<String, Double> scores
 ) {
     public UpdateSegmentRequest {
-        if (segmentId == null) {
-            throw new IllegalArgumentException("Segment ID is required");
-        }
     }
 }

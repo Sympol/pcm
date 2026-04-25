@@ -20,10 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests verifying that the Segment context encryption integration is wired correctly.
  *
- * <p>Validates Requirements 9.3, 9.5:
+ * <p>Validates Requirements:
  * <ul>
- *   <li>9.3 – Segment context uses {@link BoundedContext#SEGMENT} for encryption operations</li>
- *   <li>9.5 – Entities without PII fields are handled gracefully (no-op)</li>
+ *   <li>Segment context uses {@link BoundedContext#SEGMENT} for encryption operations</li>
+ *   <li>Entities without PII fields are handled gracefully (no-op)</li>
  * </ul>
  */
 class SegmentEncryptionIntegrationTest {

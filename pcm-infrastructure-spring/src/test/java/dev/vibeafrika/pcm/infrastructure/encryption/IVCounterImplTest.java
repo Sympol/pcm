@@ -334,7 +334,6 @@ class IVCounterImplTest {
 
     /**
      * Test counter overflow detection at 2^31.
-     * Requirements: 1.9, 1.10
      */
     @Test
     void testCounterOverflow_At2To31_DetectedAndBlocked() {
@@ -368,7 +367,6 @@ class IVCounterImplTest {
 
     /**
      * Test counter persistence at 1000 increment intervals.
-     * Requirements: 1.8
      */
     @Test
     void testCounterPersistence_At1000Intervals() {

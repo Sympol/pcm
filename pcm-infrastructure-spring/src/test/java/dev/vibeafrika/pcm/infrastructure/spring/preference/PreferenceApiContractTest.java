@@ -154,7 +154,7 @@ class PreferenceApiContractTest {
     }
 
     // =========================================================================
-    // 2. HTTP Status Codes — Requirement 7.1
+    // 2. HTTP Status Codes
     // =========================================================================
 
     @Nested
@@ -447,7 +447,7 @@ class PreferenceApiContractTest {
     }
 
     // =========================================================================
-    // 5. RFC 7807 Problem Details Error Format — Requirement 7.2
+    // 5. RFC 7807 Problem Details Error Format 
     // =========================================================================
 
     @Nested
@@ -555,7 +555,7 @@ class PreferenceApiContractTest {
     }
 
     // =========================================================================
-    // 6. Wrong HTTP Method Returns 405 — Requirement 7.1
+    // 6. Wrong HTTP Method Returns 405 
     // =========================================================================
 
     @Nested

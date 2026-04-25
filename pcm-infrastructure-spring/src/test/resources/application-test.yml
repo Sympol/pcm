@@ -10,3 +10,33 @@ logging:
     dev.vibeafrika.pcm: DEBUG
     org.springframework.web: DEBUG
     org.springframework.transaction: DEBUG
+
+# Encryption configuration for tests
+# Uses DEV environment with no KMS provider (mock/stub KMS used in tests)
+pcm:
+  encryption:
+    environment: DEV
+    default-context: PROFILE
+    blind-index-global-salt: test-global-salt-for-unit-tests-only
+    kms:
+      # No provider set in tests – KMS beans are provided by test configurations
+      provider:
+      endpoint:
+      region: us-east-1
+      certification: FIPS_140_2_L2
+    dek-cache:
+      max-size: 100
+      ttl-minutes: 60
+    key-rotation:
+      dek-rotation-days: 90
+      kek-rotation-days: 365
+      emergency-rotation-time-minutes: 15
+    audit:
+      level: HIGH
+      retain-days: 365
+      encrypt-logs: true
+      sign-logs: true
+      sampling-rate: 1
+    network:
+      mtls-enabled: false
+      private-subnet-only: false

@@ -164,7 +164,7 @@ class EncryptionFailurePreventsStoragePropertyTest {
 
         assertThat(result.getValue())
                 .as("No ciphertext value must be present when KMS times out — "
-                        + "this prevents data storage (Req 8.1)")
+                        + "this prevents data storage")
                 .isEmpty();
     }
 
@@ -190,11 +190,11 @@ class EncryptionFailurePreventsStoragePropertyTest {
 
         assertThat(result.getValue())
                 .as("No ciphertext value must be present when IV generation fails — "
-                        + "this prevents data storage (Req 8.1)")
+                        + "this prevents data storage")
                 .isEmpty();
 
         assertThat(result.getError())
-                .as("A descriptive error must be present when IV generation fails (Req 8.1)")
+                .as("A descriptive error must be present when IV generation fails")
                 .isPresent();
     }
 
@@ -223,11 +223,11 @@ class EncryptionFailurePreventsStoragePropertyTest {
 
         assertThat(result.getValue())
                 .as("No ciphertext list must be present when batch encryption fails — "
-                        + "this prevents data storage (Req 8.1)")
+                        + "this prevents data storage")
                 .isEmpty();
 
         assertThat(result.getError())
-                .as("A descriptive error must be present when batch encryption fails (Req 8.1)")
+                .as("A descriptive error must be present when batch encryption fails")
                 .isPresent();
     }
 

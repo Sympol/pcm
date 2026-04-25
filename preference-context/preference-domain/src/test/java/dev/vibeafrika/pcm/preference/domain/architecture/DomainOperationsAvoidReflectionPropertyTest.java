@@ -13,8 +13,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 /**
  * Property-based test for domain operations avoiding reflection.
  * 
- * **Validates: Requirements 17.3**
- * 
  * Feature: framework-agnostic-domain, Property 25: Domain Operations Avoid Reflection
  * 
  * This test verifies that:
@@ -40,7 +38,7 @@ class DomainOperationsAvoidReflectionPropertyTest {
             .should().dependOnClassesThat().resideInAnyPackage(
                 "java.lang.reflect.."
             )
-            .because("Domain operations must avoid reflection for performance (Requirement 17.3)");
+            .because("Domain operations must avoid reflection for performance");
 
         rule.check(domainClasses);
     }
@@ -59,7 +57,7 @@ class DomainOperationsAvoidReflectionPropertyTest {
             .should().dependOnClassesThat().resideInAnyPackage(
                 "java.lang.invoke.."
             )
-            .because("Domain operations must avoid MethodHandles (Requirement 17.3)");
+            .because("Domain operations must avoid MethodHandles");
 
         rule.check(domainClasses);
     }

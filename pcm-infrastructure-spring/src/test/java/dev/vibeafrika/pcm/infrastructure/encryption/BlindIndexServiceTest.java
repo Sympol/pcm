@@ -132,7 +132,7 @@ class BlindIndexServiceTest {
             assertTrue(result.isSuccess());
             String value = result.getValue().orElseThrow().getValue();
             assertEquals(64, value.length(),
-                    "HMAC-SHA256 output must be 32 bytes = 64 hex characters (Req 6.3)");
+                    "HMAC-SHA256 output must be 32 bytes = 64 hex characters");
             assertTrue(value.matches("[0-9a-f]+"),
                     "Output must be a lowercase hex string");
         }
@@ -264,7 +264,7 @@ class BlindIndexServiceTest {
             assertTrue(indexB.isSuccess());
             assertNotEquals(indexA.getValue().orElseThrow().getValue(),
                     indexB.getValue().orElseThrow().getValue(),
-                    "Different global salts must produce different blind indexes (Req 6.5)");
+                    "Different global salts must produce different blind indexes");
         }
 
         @Test
@@ -307,7 +307,7 @@ class BlindIndexServiceTest {
             String expected = HexFormat.of().formatHex(hmacBytes);
 
             assertEquals(expected, result.getValue().orElseThrow().getValue(),
-                    "Blind index must equal HMAC-SHA256(key, globalSalt || recordSalt || normalize(plaintext)) (Req 6.3, 6.5)");
+                    "Blind index must equal HMAC-SHA256(key, globalSalt || recordSalt || normalize(plaintext))");
         }
     }
 
@@ -335,7 +335,7 @@ class BlindIndexServiceTest {
             assertTrue(index2.isSuccess());
             assertNotEquals(index1.getValue().orElseThrow().getValue(),
                     index2.getValue().orElseThrow().getValue(),
-                    "Different per-record salts must produce different blind indexes (Req 6.6)");
+                    "Different per-record salts must produce different blind indexes");
         }
 
         @Test

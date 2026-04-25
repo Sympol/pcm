@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
  * Unit tests for {@link HardwareAccelerationConfig}.
  *
  * <p>Validates that AES-NI detection and provider resolution work correctly
- * without throwing exceptions (Requirement 10.9).
+ * without throwing exceptions.
  */
 class HardwareAccelerationConfigTest {
 

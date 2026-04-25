@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests verifying that batch encryption/decryption operations minimise KMS calls.
  *
- * <p>Requirements 10.3, 10.4:
+ * <p>Requirements :
  * <ul>
  *   <li>encryptBatch reuses a single DEK for all items (one getActiveDEK call)</li>
  *   <li>decryptBatch pre-fetches unique DEKs — O(k) calls, not O(n)</li>
@@ -60,7 +60,6 @@ class BatchOperationsOptimizationTest {
 
     /**
      * Verifies that encryptBatch calls getActiveDEK exactly once regardless of batch size.
-     * Requirements: 10.3, 10.4
      */
     @Test
     void encryptBatch_reusesDEKForAllItems() throws Exception {
@@ -90,7 +89,6 @@ class BatchOperationsOptimizationTest {
     /**
      * Verifies that decryptBatch calls getDEK exactly once per unique key ID,
      * even when the batch contains ciphertexts from multiple DEKs.
-     * Requirements: 10.3, 10.4
      */
     @Test
     void decryptBatch_prefetchesUniqueDEKs() throws Exception {
@@ -145,7 +143,6 @@ class BatchOperationsOptimizationTest {
 
     /**
      * Verifies that decryptBatch returns plaintexts in the same order as the input ciphertexts.
-     * Requirements: 10.3
      */
     @Test
     void decryptBatch_preservesOrder() throws Exception {
@@ -182,7 +179,6 @@ class BatchOperationsOptimizationTest {
 
     /**
      * Verifies that decryptBatch handles an empty input list without errors.
-     * Requirements: 10.3
      */
     @Test
     void decryptBatch_handlesEmptyBatch() {

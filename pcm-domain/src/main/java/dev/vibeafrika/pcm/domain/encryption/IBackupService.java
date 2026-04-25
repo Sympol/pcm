@@ -62,7 +62,7 @@ public interface IBackupService {
      * Backs up audit logs for the given time range.
      *
      * <p>Audit logs are backed up continuously to ensure they are available for
-     * compliance and forensic analysis even if the primary audit log store is lost (Req 30.5).
+     * compliance and forensic analysis even if the primary audit log store is lost.
      *
      * @param from the start of the time range (inclusive)
      * @param to   the end of the time range (inclusive)

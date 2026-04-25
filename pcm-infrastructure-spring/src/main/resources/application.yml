@@ -109,3 +109,111 @@ segment:
   max-segments-per-tenant: 500
   evaluation-cache-enabled: true
   evaluation-cache-ttl-seconds: 600
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PCM Encryption Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+pcm:
+  encryption:
+    # Deployment environment: DEV, STAGING, or PROD
+    # Must be set to PROD in production deployments for key isolation 
+    environment: ${ENCRYPTION_ENVIRONMENT:DEV}
+
+    # Default bounded context for encryption operations
+    default-context: PROFILE
+
+    # Blind index global salt – MUST be overridden in STAGING and PROD environments
+    # Set via environment variable or secret manager 
+    blind-index-global-salt: ${BLIND_INDEX_GLOBAL_SALT:default-dev-salt-change-in-prod}
+
+    # ── KMS Connection Parameters ─────────────────────────────────────────────
+    kms:
+      # KMS provider: AWS_KMS | AZURE_KEY_VAULT | GCP_KMS | VAULT
+      # Leave unset to disable KMS integration (e.g., for local development)
+      provider: ${KMS_PROVIDER:}
+
+      # KMS endpoint URL (required when provider is set)
+      endpoint: ${KMS_ENDPOINT:}
+
+      # Cloud region (required for AWS_KMS)
+      region: ${KMS_REGION:us-east-1}
+
+      # GCP-specific settings (required when provider=GCP_KMS)
+      gcp-project-id: ${GCP_PROJECT_ID:}
+      gcp-location-id: ${GCP_LOCATION_ID:us-east1}
+
+      # FIPS certification level: FIPS_140_2_L2 | FIPS_140_2_L3
+      # FIPS_140_2_L3 required for PROD 
+      certification: ${KMS_CERTIFICATION:FIPS_140_2_L2}
+
+      # KMS health check interval
+      health-check-interval: PT30S
+
+      # mTLS configuration for KMS communication 
+      mtls:
+        enabled: ${KMS_MTLS_ENABLED:false}
+        keystore-path: ${KMS_KEYSTORE_PATH:}
+        keystore-password: ${KMS_KEYSTORE_PASSWORD:}
+        truststore-path: ${KMS_TRUSTSTORE_PATH:}
+        truststore-password: ${KMS_TRUSTSTORE_PASSWORD:}
+
+      # Failover KMS configuration 
+      failover:
+        enabled: ${KMS_FAILOVER_ENABLED:false}
+        provider: ${KMS_FAILOVER_PROVIDER:}
+        endpoint: ${KMS_FAILOVER_ENDPOINT:}
+        region: ${KMS_FAILOVER_REGION:}
+
+    # ── DEK Cache Configuration ───────────────────────────────────────────────
+    # Requirements: 
+    dek-cache:
+      # Maximum number of DEKs to hold in the LRU cache 
+      max-size: ${DEK_CACHE_MAX_SIZE:1000}
+      # Time-to-live for cached DEKs in minutes; max 60 per 
+      ttl-minutes: ${DEK_CACHE_TTL_MINUTES:60}
+      # Use secure memory allocation for cached DEKs 
+      secure-memory: false
+
+    # ── Key Rotation Policies ─────────────────────────────────────────────────
+    key-rotation:
+      # Rotate DEKs after this many days 
+      dek-rotation-days: 90
+      # Rotate DEKs after this many bytes encrypted (1 TB)
+      dek-rotation-bytes: 1099511627776
+      # Rotate DEKs after this many operations (2^32)
+      dek-rotation-operations: 4294967296
+      # Rotate KEKs after this many days 
+      kek-rotation-days: 365
+      # Emergency rotation time limit in minutes
+      emergency-rotation-time-minutes: 15
+
+    # ── Audit Logging Configuration ───────────────────────────────────────────
+    audit:
+      # Minimum log level: CRITICAL | HIGH | MEDIUM | LOW 
+      level: ${AUDIT_LOG_LEVEL:HIGH}
+      # Audit log retention in days; minimum 365 
+      retention-days: 365
+      # Encrypt audit logs at rest 
+      encrypt-logs: true
+      # Sign audit log entries with HMAC 
+      sign-logs: true
+      # Sampling rate for high-volume operations: 1 = log all 
+      sampling-rate: 1
+
+    # ── Network Security Configuration ────────────────────────────────────────
+    network:
+      # Enforce mTLS for KMS communication 
+      mtls-enabled: ${NETWORK_MTLS_ENABLED:false}
+      # Restrict KMS access to private subnets only 
+      private-subnet-only: ${NETWORK_PRIVATE_SUBNET_ONLY:false}
+      # Allowed service IP addresses for KMS access
+      allowed-service-ips: []
+
+      # Circuit breaker for KMS availability
+      circuit-breaker:
+        # Number of failures before opening the circuit
+        failure-threshold: 5
+        # Recovery time in seconds before attempting half-open
+        recovery-time-seconds: 60
+        # Maximum calls in half-open state
+        half-open-max-calls: 3

@@ -1,78 +1,74 @@
 # PCM Quick Start Guide
 
-This guide will help you get the **PCM (Profile & Consent Manager)** platform running on your local machine for development and testing.
+This guide will help you get **PCM (Profile & Consent Manager)** running on your local machine for development and testing.
 
 ## Prerequisites
 
-- **Java 21** (Required for virtual threads and modern syntax)
+- **Java 21** (required for virtual threads and modern syntax)
 - **Maven 3.9+**
 - **Docker & Docker Compose**
-- **Postman or curl** (for testing APIs)
+- **curl or Postman** (for testing APIs)
 
-## Automated Startup (Recommended)
-
-We provide helper scripts to manage the full platform lifecycle.
-
-```bash
-# Start everything in order (Infrastructure -> Config -> Services)
-./scripts/start-platform.sh
-
-# Stop everything
-./scripts/stop-platform.sh
-```
-
-## Manual Startup
+---
 
 ## 1. Start Infrastructure
 
-PCM relies on a few key infrastructure components. We provide a pre-configured `docker-compose.yml` to get them running instantly.
+PCM relies on PostgreSQL, Redis, Kafka, and optionally Vault. A pre-configured `docker-compose.yml` starts everything:
 
 ```bash
 # From the project root
 docker-compose up -d
 ```
 
-This will start:
-- **PostgreSQL/MySQL**: Storage (Port 8843)
-- **Redis**: Caching (Port 6779)
-- **Kafka**: Messaging (Port 9092)
-- **RabbitMQ**: Alternative Messaging (Port 5672)
-- **Elasticsearch**: Segmentation (Port 9200)
-- **OpenTelemetry Collector**: Observability (Port 4318)
-- **Jaeger**: Distributed Tracing (Port 16686)
-- **Kafka UI**: `http://localhost:8095`
+This starts:
+- **PostgreSQL** — primary database (port 5432)
+- **Redis** — caching (port 6379)
+- **Kafka** — messaging (port 9092)
+- **HashiCorp Vault** — secrets & key management (port 8200)
+- **OpenTelemetry Collector** — observability (port 4318)
+- **Jaeger** — distributed tracing UI at `http://localhost:16686`
+- **Prometheus** — metrics at `http://localhost:9090`
+- **Grafana** — dashboards at `http://localhost:3000`
+
+---
 
 ## 2. Build the Platform
-
-Build all shared libraries and microservices using Maven:
 
 ```bash
 mvn clean install -DskipTests
 ```
 
-## 3. Run the Services
+This builds all modules: the four bounded contexts (`preference`, `profile`, `consent`, `segment`) and the unified Spring Boot application (`pcm-infrastructure-spring`).
 
-You can run each service individually. **Crucial**: Start the `config-service` first.
+---
+
+## 3. Run the Application
+
+PCM is a **single deployable artifact** — one Spring Boot application serving all bounded contexts:
 
 ```bash
-# Start Config Service (Port 8888)
-cd config-service && mvn spring-boot:run
-
-# Once Config Service is UP, start others:
-cd ../profile-service && mvn spring-boot:run
-cd ../api-gateway && mvn spring-boot:run
+mvn spring-boot:run -pl pcm-infrastructure-spring
 ```
+
+The application starts on **port 8080** by default.
+
+Health check:
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+---
 
 ## 4. Your First API Calls
 
-The **API Gateway** acts as the single entry point at `http://localhost:9880`.
-
 ### Create a Profile
-```sh
-curl -X POST http://localhost:9880/api/v1/profiles \
+
+```bash
+curl -X POST http://localhost:8080/api/v1/profiles \
   -H "Content-Type: application/json" \
-  -H "X-Tenant-Id: vibe-afrika" \
+  -H "X-Tenant-Id: default" \
   -d '{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
     "handle": "koffi_jean",
     "attributes": {
       "displayName": "Koffi Jean Christ",
@@ -81,34 +77,75 @@ curl -X POST http://localhost:9880/api/v1/profiles \
   }'
 ```
 
-### Get Unified User View ("Me")
-PCM uses Keycloak for IAM. To call protected endpoints, you first need a JWT token:
+### Grant Consent
 
 ```bash
-# Get a token for pcm-admin
-TOKEN=$(curl -s -X POST "http://localhost:8090/auth/realms/pcm/protocol/openid-connect/token" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "username=pcm-admin" \
-     -d "password=pcm_admin_password" \
-     -d "grant_type=password" \
-     -d "client_id=pcm-gateway" | jq -r '.access_token')
-
-# Access the "Me" aggregator
-curl -H "Authorization: Bearer $TOKEN" -H "X-Tenant-Id: vibe-afrika" http://localhost:9880/api/v1/users/me
+curl -X POST http://localhost:8080/api/v1/consents \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: default" \
+  -d '{
+    "profileId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "default",
+    "purpose": "MARKETING",
+    "scope": "EMAIL"
+  }'
 ```
+
+### Verify Consent
+
+```bash
+curl "http://localhost:8080/api/v1/consents/verify?consentId=<consent-id>" \
+  -H "X-Tenant-Id: default"
+```
+
+---
 
 ## 5. Useful Endpoints
 
-| Service | Port | Documentation |
-| :--- | :--- | :--- |
-| **API Gateway** | 9880 | `http://localhost:9880/swagger-ui.html` |
-| **Profile** | 18081 | `http://localhost:18081/swagger-ui.html` |
-| **Preference**| 18082 | `http://localhost:18082/swagger-ui.html` |
-| **Consent** | 18083 | `http://localhost:18083/swagger-ui.html` |
-| **Segment** | 18084 | `http://localhost:18084/swagger-ui.html` |
-| **Config** | 8888 | `http://localhost:8888/actuator/health` |
-| **Tracing (Jaeger)** | 16686 | `http://localhost:16686/search` |
-| **Rabbit UI** | 15672 | `http://localhost:15672` |
+| Endpoint | Description |
+|----------|-------------|
+| `http://localhost:8080/api/v1/profiles` | Profile API |
+| `http://localhost:8080/api/v1/consents` | Consent API |
+| `http://localhost:8080/api/v1/preferences` | Preference API |
+| `http://localhost:8080/api/v1/segments` | Segment API |
+| `http://localhost:8080/actuator/health` | Health check |
+| `http://localhost:8080/actuator/metrics` | Prometheus metrics |
+| `http://localhost:16686` | Jaeger tracing UI |
+| `http://localhost:3000` | Grafana dashboards |
 
 ---
-**Note**: In development mode, security is relaxed for some endpoints. In production, all requests except profile registration require a valid JWT.
+
+## 6. Running Tests
+
+```bash
+# All tests
+mvn test
+
+# Domain tests only (no Spring context, fast)
+mvn test -pl consent-context/consent-domain
+mvn test -pl profile-context/profile-domain
+
+# Full integration tests
+mvn test -pl pcm-infrastructure-spring
+```
+
+---
+
+## 7. Configuration
+
+PCM uses environment variables for all configuration. Key variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SERVER_PORT` | HTTP port | `8080` |
+| `SPRING_DATASOURCE_URL` | Database URL | `jdbc:postgresql://localhost:5432/pcm_db` |
+| `SPRING_DATASOURCE_USERNAME` | DB username | `pcm` |
+| `SPRING_DATASOURCE_PASSWORD` | DB password | `pcm_dev_password` |
+| `PCM_ENCRYPTION_PROVIDER` | KMS provider (`vault`, `aws`, `azure`, `gcp`, `local`) | `local` |
+| `VAULT_URI` | Vault address | `http://localhost:8200` |
+
+See [Infrastructure Portability](PORTABILITY.md) for the full configuration reference.
+
+---
+
+> **Note**: In development mode, security is relaxed for some endpoints. In production, all requests require a valid JWT issued by Keycloak.

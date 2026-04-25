@@ -53,7 +53,7 @@ public interface IEncryptionService {
      * Batch operations are more efficient than individual encrypt calls because:
      * - The active DEK is retrieved once and reused for all encryptions
      * - Reduces overhead from repeated KeyManager and AuditLogger calls
-     * - Maintains throughput above 100 fields per second (Requirement 10.4)
+     * - Maintains throughput above 100 fields per second 
      * 
      * Each plaintext is encrypted independently with a unique IV, ensuring
      * that identical plaintexts produce different ciphertexts.
@@ -70,7 +70,7 @@ public interface IEncryptionService {
      * Batch operations are more efficient than individual decrypt calls because:
      * - DEKs are retrieved once and cached for reuse across the batch
      * - Reduces overhead from repeated KeyManager and AuditLogger calls
-     * - Maintains throughput above 100 fields per second (Requirement 10.4)
+     * - Maintains throughput above 100 fields per second
      * 
      * Each ciphertext may have been encrypted with a different DEK (due to key rotation),
      * so the implementation must handle multiple key_ids within a single batch.
@@ -117,7 +117,6 @@ public interface IEncryptionService {
      *
      * <p>This ensures that data shared between bounded contexts is always encrypted
      * with the correct context-specific DEK, maintaining KEK isolation per
-     * Requirement 16.9.
      *
      * @param ciphertext    the ciphertext encrypted under the source context DEK
      * @param sourceContext the bounded context that originally encrypted the data

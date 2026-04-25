@@ -21,14 +21,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>Responsibilities:
  * <ul>
  *   <li>Encrypt each log entry payload with AES-256-GCM using a dedicated
- *       audit log encryption key (separate from DEK/KEK used for PII).
- *       Satisfies Requirement 7.7.</li>
+ *       audit log encryption key (separate from DEK/KEK used for PII).</li>
  *   <li>Persist entries via {@link AuditLogEntryRepository}, which enforces
- *       append-only semantics by prohibiting delete operations.
- *       Satisfies Requirement 7.9.</li>
+ *       append-only semantics by prohibiting delete operations.</li>
  *   <li>Store the HMAC-SHA256 signature alongside the encrypted payload so
- *       that integrity can be verified without decryption.
- *       Satisfies Requirement 7.10.</li>
+ *       that integrity can be verified without decryption.</li>
  * </ul>
  *
  * <p>The audit log encryption key is completely separate from the DEK/KEK

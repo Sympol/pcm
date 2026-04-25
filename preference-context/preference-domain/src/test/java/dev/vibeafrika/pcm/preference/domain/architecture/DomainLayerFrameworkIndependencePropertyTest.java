@@ -9,6 +9,7 @@ import dev.vibeafrika.pcm.preference.domain.model.PreferenceId;
 import dev.vibeafrika.pcm.preference.domain.model.PreferenceKey;
 import dev.vibeafrika.pcm.preference.domain.model.ProfileId;
 import dev.vibeafrika.pcm.preference.domain.model.TenantId;
+import net.jqwik.api.Assume;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.constraints.NotBlank;
@@ -135,6 +136,10 @@ class DomainLayerFrameworkIndependencePropertyTest {
     void domainClassesCanBeInstantiatedWithoutFrameworkContext(
             @ForAll @NotBlank @StringLength(min = 1, max = 100) String tenantIdValue,
             @ForAll @NotBlank @StringLength(min = 1, max = 100) String preferenceKeyValue) {
+
+        // Skip whitespace-only strings that pass @NotBlank but fail pure-assert's .notBlank()
+        Assume.that(!tenantIdValue.isBlank());
+        Assume.that(!preferenceKeyValue.isBlank());
 
         // TenantId - plain factory, no framework
         TenantId tenantId = TenantId.of(tenantIdValue);

@@ -295,4 +295,23 @@ public class KMSCircuitBreaker implements IKMSClient {
     private IKMSClient activeClient() {
         return (usingSecondary && secondaryKms != null) ? secondaryKms : primaryKms;
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Unified secret management (Requirement 36) — delegated to active client
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public Result<Unit, KMSError> storeSecret(java.util.UUID secretId, String secretValue, java.util.UUID kekId) {
+        return activeClient().storeSecret(secretId, secretValue, kekId);
+    }
+
+    @Override
+    public Result<String, KMSError> retrieveSecret(java.util.UUID secretId, java.util.UUID kekId) {
+        return activeClient().retrieveSecret(secretId, kekId);
+    }
+
+    @Override
+    public Result<Unit, KMSError> deleteSecret(java.util.UUID secretId) {
+        return activeClient().deleteSecret(secretId);
+    }
 }

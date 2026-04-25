@@ -14,8 +14,5 @@ public record EvaluateSegmentRequest(
         if (profileId == null) {
             throw new IllegalArgumentException("Profile ID is required");
         }
-        if (tenantId == null || tenantId.isBlank()) {
-            throw new IllegalArgumentException("Tenant ID is required");
-        }
     }
 }

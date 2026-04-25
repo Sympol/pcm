@@ -15,9 +15,6 @@ public record CreateSegmentRequest(
     Map<String, Double> scores
 ) {
     public CreateSegmentRequest {
-        if (tenantId == null || tenantId.isBlank()) {
-            throw new IllegalArgumentException("Tenant ID is required");
-        }
         if (profileId == null) {
             throw new IllegalArgumentException("Profile ID is required");
         }

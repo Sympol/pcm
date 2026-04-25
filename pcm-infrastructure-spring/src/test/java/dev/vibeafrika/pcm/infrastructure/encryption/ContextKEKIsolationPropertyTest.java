@@ -98,7 +98,7 @@ class ContextKEKIsolationPropertyTest {
         // Core property: the KEK IDs referenced by the active DEKs must be different
         assertThat(activeDEKKekIdA)
                 .as("Active DEK for context %s must use a different KEK than active DEK for context %s "
-                        + "(Requirement 16.5: separate KEK per bounded context). "
+                        + "(separate KEK per bounded context). "
                         + "kekId(%s)=%s, kekId(%s)=%s",
                         contextA, contextB, contextA, activeDEKKekIdA, contextB, activeDEKKekIdB)
                 .isNotEqualTo(activeDEKKekIdB);
@@ -107,8 +107,6 @@ class ContextKEKIsolationPropertyTest {
     /**
      * Property 37 (all pairs): Verifies KEK isolation holds for every possible
      * pair of distinct bounded contexts exhaustively.
-     *
-     * <p><b>Validates: Requirements 16.5</b>
      */
     @Property(tries = 100)
     @Label("Property 37: All pairs of distinct bounded contexts use different KEKs")
@@ -260,6 +258,21 @@ class ContextKEKIsolationPropertyTest {
         @Override
         public Result<KMSHealth, KMSError> healthCheck() {
             return Result.success(KMSHealth.healthy(0L));
+        }
+
+        @Override
+        public Result<Unit, KMSError> storeSecret(java.util.UUID secretId, String secretValue, java.util.UUID kekId) {
+            return Result.success(Unit.unit());
+        }
+
+        @Override
+        public Result<String, KMSError> retrieveSecret(java.util.UUID secretId, java.util.UUID kekId) {
+            return Result.failure(KMSError.of("NOT_IMPLEMENTED", "retrieveSecret not implemented in stub"));
+        }
+
+        @Override
+        public Result<Unit, KMSError> deleteSecret(java.util.UUID secretId) {
+            return Result.success(Unit.unit());
         }
     }
 

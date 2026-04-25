@@ -15,8 +15,7 @@ import java.util.List;
 /**
  * Spring Boot configuration for KMS network segmentation.
  *
- * <p>Enforces the following network security controls (Requirements 27.1, 27.4, 27.5,
- * 27.7, 27.8):
+ * <p>Enforces the following network security controls :
  * <ul>
  *   <li>KMS access is restricted to private subnets (RFC 1918 address ranges)</li>
  *   <li>IP allowlist checking for authorized service IPs</li>
@@ -78,7 +77,7 @@ public class NetworkSecurityConfiguration {
      * address when {@code private-subnet-only} is {@code true}.
      *
      * <p>Called at application startup to fail fast if the KMS endpoint is
-     * reachable from a public IP, which would violate Requirement 27.1.
+     * reachable from a public IP, which would violate.
      *
      * @throws IllegalStateException if the endpoint resolves to a public IP
      *                               and private-subnet-only is enabled
@@ -147,7 +146,7 @@ public class NetworkSecurityConfiguration {
                     throw new IllegalStateException(
                             "KMS endpoint '" + kmsEndpoint + "' resolves to public IP '" + resolvedIp +
                             "'. Private-subnet-only mode requires a private IP address. " +
-                            "Requirement 27.1: KMS must be accessed from private subnets only.");
+                            "KMS must be accessed from private subnets only.");
                 }
 
                 log.info("NetworkSecurity: KMS endpoint '{}' resolves to private IP '{}' — OK",

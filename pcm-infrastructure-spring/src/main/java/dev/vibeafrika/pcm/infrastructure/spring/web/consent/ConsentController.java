@@ -20,19 +20,16 @@ public class ConsentController {
     private final RevokeConsentUseCase revokeConsentUseCase;
     private final VerifyConsentUseCase verifyConsentUseCase;
     private final GetConsentHistoryUseCase getConsentHistoryUseCase;
-    private final ProcessTCFConsentUseCase processTCFConsentUseCase;
 
     public ConsentController(
             GrantConsentUseCase grantConsentUseCase,
             RevokeConsentUseCase revokeConsentUseCase,
             VerifyConsentUseCase verifyConsentUseCase,
-            GetConsentHistoryUseCase getConsentHistoryUseCase,
-            ProcessTCFConsentUseCase processTCFConsentUseCase) {
+            GetConsentHistoryUseCase getConsentHistoryUseCase) {
         this.grantConsentUseCase = grantConsentUseCase;
         this.revokeConsentUseCase = revokeConsentUseCase;
         this.verifyConsentUseCase = verifyConsentUseCase;
         this.getConsentHistoryUseCase = getConsentHistoryUseCase;
-        this.processTCFConsentUseCase = processTCFConsentUseCase;
     }
 
     /**
@@ -82,21 +79,4 @@ public class ConsentController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * POST /api/v1/consents/tcf - Process IAB TCF consent string.
-     */
-    @PostMapping("/tcf")
-    public ResponseEntity<ConsentResponse> processTCFConsent(
-            @RequestHeader("X-Tenant-Id") String tenantId,
-            @RequestBody TCFConsentRequest request) {
-        TCFConsentRequest requestWithTenant = new TCFConsentRequest(
-            request.profileId(),
-            tenantId,
-            request.tcString(),
-            request.vendorId(),
-            request.purposeId()
-        );
-        ConsentResponse response = processTCFConsentUseCase.execute(requestWithTenant);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
 }

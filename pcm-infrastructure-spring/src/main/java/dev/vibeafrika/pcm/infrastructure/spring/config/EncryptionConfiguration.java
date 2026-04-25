@@ -4,6 +4,7 @@ import dev.vibeafrika.pcm.domain.encryption.Environment;
 import dev.vibeafrika.pcm.domain.encryption.IAuditLogger;
 import dev.vibeafrika.pcm.domain.encryption.IEncryptionService;
 import dev.vibeafrika.pcm.domain.encryption.IKMSClient;
+import dev.vibeafrika.pcm.domain.encryption.ISecretManager;
 import dev.vibeafrika.pcm.domain.encryption.IVCounter;
 import dev.vibeafrika.pcm.infrastructure.encryption.BlindIndexService;
 import dev.vibeafrika.pcm.infrastructure.encryption.DEKCache;
@@ -14,6 +15,8 @@ import dev.vibeafrika.pcm.infrastructure.encryption.HardwareAccelerationConfig;
 import dev.vibeafrika.pcm.infrastructure.encryption.IVCounterImpl;
 import dev.vibeafrika.pcm.infrastructure.encryption.InMemoryIVCounterStorage;
 import dev.vibeafrika.pcm.infrastructure.encryption.KeyManager;
+import dev.vibeafrika.pcm.infrastructure.encryption.SecretManager;
+import dev.vibeafrika.pcm.infrastructure.encryption.SecretRotationScheduler;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +97,7 @@ public class EncryptionConfiguration {
      * @throws IllegalArgumentException if the environment name is invalid
      */
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(Environment.class)
     public Environment encryptionEnvironment() {
         try {
             Environment env = Environment.valueOf(environmentName.toUpperCase());
@@ -115,6 +119,7 @@ public class EncryptionConfiguration {
      * @return the DEK cache
      */
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(DEKCache.class)
     public DEKCache dekCache() {
         logger.info("Creating DEKCache: maxSize={}, ttlMinutes={}", dekCacheMaxSize, dekCacheTtlMinutes);
         this.dekCache = new DEKCache(dekCacheMaxSize, java.time.Duration.ofMinutes(dekCacheTtlMinutes));
@@ -127,6 +132,7 @@ public class EncryptionConfiguration {
      * @return the IV counter
      */
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(IVCounter.class)
     public IVCounter ivCounter() {
         return new IVCounterImpl(new InMemoryIVCounterStorage());
     }
@@ -151,6 +157,7 @@ public class EncryptionConfiguration {
      */
     @Bean
     @ConditionalOnBean({IKMSClient.class, IAuditLogger.class})
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(KeyManager.class)
     public KeyManager keyManager(IKMSClient kmsClient,
                                   IAuditLogger auditLogger,
                                   DEKCache dekCache,
@@ -173,6 +180,7 @@ public class EncryptionConfiguration {
      */
     @Bean
     @ConditionalOnBean(KeyManager.class)
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(BlindIndexService.class)
     public BlindIndexService blindIndexService(KeyManager keyManager) {
         logger.info("Creating BlindIndexService");
         return new BlindIndexService(keyManager, blindIndexGlobalSalt);
@@ -189,6 +197,7 @@ public class EncryptionConfiguration {
      */
     @Bean
     @ConditionalOnBean({KeyManager.class, BlindIndexService.class, IAuditLogger.class})
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(IEncryptionService.class)
     public IEncryptionService encryptionService(KeyManager keyManager,
                                                  BlindIndexService blindIndexService,
                                                  IAuditLogger auditLogger,
@@ -205,8 +214,51 @@ public class EncryptionConfiguration {
      */
     @Bean
     @ConditionalOnBean(KeyManager.class)
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(DEKCacheWarmer.class)
     public DEKCacheWarmer dekCacheWarmer(KeyManager keyManager) {
         return new DEKCacheWarmer(keyManager);
+    }
+
+    /**
+     * Creates the {@link SecretManager} bean for unified secret management.
+     *
+     * <p>Shares the same DEK cache, KMS client, audit logger, and environment as
+     * {@link KeyManager}, applying the same TTL/LRU caching and access control
+     * policies to non-cryptographic secrets (Requirements 36.8, 36.9).
+     *
+     * @param kmsClient   the KMS client
+     * @param auditLogger the audit logger
+     * @param dekCache    the shared DEK/secret cache
+     * @param environment the current deployment environment
+     * @param keyManager  the key manager (provides KEK IDs per bounded context)
+     * @return the configured SecretManager
+     */
+    @Bean
+    @ConditionalOnBean(KeyManager.class)
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(ISecretManager.class)
+    public ISecretManager secretManager(IKMSClient kmsClient,
+                                         IAuditLogger auditLogger,
+                                         DEKCache dekCache,
+                                         Environment environment,
+                                         KeyManager keyManager) {
+        logger.info("Creating SecretManager for environment: {}", environment);
+        return new SecretManager(kmsClient, auditLogger, dekCache, environment, keyManager.getKekIds());
+    }
+
+    /**
+     * Creates the {@link SecretRotationScheduler} bean that checks for overdue secrets hourly.
+     *
+     * @param secretManager the secret manager
+     * @param auditLogger   the audit logger
+     * @return the rotation scheduler
+     */
+    @Bean
+    @ConditionalOnBean(ISecretManager.class)
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(SecretRotationScheduler.class)
+    public SecretRotationScheduler secretRotationScheduler(ISecretManager secretManager,
+                                                            IAuditLogger auditLogger) {
+        logger.info("Creating SecretRotationScheduler");
+        return new SecretRotationScheduler((SecretManager) secretManager, auditLogger);
     }
 
     /**

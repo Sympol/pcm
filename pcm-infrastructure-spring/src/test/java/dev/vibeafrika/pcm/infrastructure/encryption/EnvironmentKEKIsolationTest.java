@@ -78,7 +78,7 @@ class EnvironmentKEKIsolationTest {
 
         // Each environment gets its own KEK
         assertNotEquals(devKek, prodKek,
-            "DEV and PROD environments must use different KEKs (Requirement 17.1)");
+            "DEV and PROD environments must use different KEKs");
 
         // Verify generateKEK was called with the correct environment for each
         verify(kmsClient).generateKEK(CONTEXT, Environment.DEV);
@@ -135,7 +135,7 @@ class EnvironmentKEKIsolationTest {
 
         // PROD manager has no knowledge of DEV DEK - should return KEY_NOT_FOUND
         assertTrue(prodGetResult.isFailure(),
-            "PROD KeyManager must not be able to retrieve DEV DEK (Requirement 17.2)");
+            "PROD KeyManager must not be able to retrieve DEV DEK");
         String errorCode = prodGetResult.getError()
             .map(KeyError::getCode)
             .orElse("");
@@ -148,7 +148,7 @@ class EnvironmentKEKIsolationTest {
     void keyManagerEnvironment_isImmutableAfterConstruction() {
         KeyManager prodManager = createKeyManager(Environment.PROD);
         assertEquals(Environment.PROD, prodManager.getEnvironment(),
-            "Environment must be fixed at construction time (Requirement 17.2)");
+            "Environment must be fixed at construction time");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -177,7 +177,7 @@ class EnvironmentKEKIsolationTest {
         DEKWithMetadata dekWithMetadata = dekResult.getValue().orElseThrow();
 
         assertEquals(Environment.PROD, dekWithMetadata.getEnvironment(),
-            "DEK metadata must include environment identifier (Requirement 17.3)");
+            "DEK metadata must include environment identifier");
     }
 
     @Test
@@ -195,7 +195,7 @@ class EnvironmentKEKIsolationTest {
         UUID dekId = rotateResult.getValue().orElseThrow();
 
         String namespace = prodManager.getDEKNamespace(dekId);
-        assertNotNull(namespace, "DEK namespace must not be null (Requirement 17.3)");
+        assertNotNull(namespace, "DEK namespace must not be null");
         assertTrue(namespace.startsWith("prod."),
             "DEK namespace must start with environment prefix 'prod.' but was: " + namespace);
         assertTrue(namespace.contains("profile"),
@@ -212,7 +212,7 @@ class EnvironmentKEKIsolationTest {
         stagingManager.initializeKEK(CONTEXT);
 
         String namespace = stagingManager.getKEKNamespace(kekId);
-        assertNotNull(namespace, "KEK namespace must not be null (Requirement 17.3)");
+        assertNotNull(namespace, "KEK namespace must not be null");
         assertTrue(namespace.startsWith("staging."),
             "KEK namespace must start with environment prefix 'staging.' but was: " + namespace);
         assertTrue(namespace.contains("kek"),

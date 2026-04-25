@@ -41,7 +41,7 @@ class ConfigurationInterfacesFrameworkAgnosticPropertyTest {
             .orShould().beAnnotatedWith("org.springframework.context.annotation.Configuration")
             .orShould().beAnnotatedWith("org.springframework.beans.factory.annotation.Value")
             .orShould().beAnnotatedWith("org.springframework.stereotype.Component")
-            .because("Configuration interfaces must not use Spring annotations (Requirement 20.2)");
+            .because("Configuration interfaces must not use Spring annotations");
 
         rule.check(applicationClasses);
     }
@@ -54,7 +54,7 @@ class ConfigurationInterfacesFrameworkAgnosticPropertyTest {
             .should().beAnnotatedWith("io.smallrye.config.ConfigMapping")
             .orShould().beAnnotatedWith("io.quarkus.arc.config.ConfigProperties")
             .orShould().beAnnotatedWith("jakarta.enterprise.context.ApplicationScoped")
-            .because("Configuration interfaces must not use Quarkus annotations (Requirement 20.2)");
+            .because("Configuration interfaces must not use Quarkus annotations)");
 
         rule.check(applicationClasses);
     }

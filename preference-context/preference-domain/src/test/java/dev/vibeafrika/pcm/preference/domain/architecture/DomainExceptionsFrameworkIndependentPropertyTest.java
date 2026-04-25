@@ -13,8 +13,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Property-based test for domain exceptions being framework-independent.
  * 
- * **Validates: Requirements 18.4**
- * 
  * Feature: framework-agnostic-domain, Property 15: Domain Exceptions Are Framework-Independent
  * 
  * This test verifies that:
@@ -39,7 +37,7 @@ class DomainExceptionsFrameworkIndependentPropertyTest {
             .that().resideInAPackage("..domain.exception..")
             .should().beAssignableTo("org.springframework.core.NestedRuntimeException")
             .orShould().beAssignableTo("org.springframework.web.server.ResponseStatusException")
-            .because("Domain exceptions must not extend Spring exception types (Requirement 18.4)");
+            .because("Domain exceptions must not extend Spring exception types");
 
         rule.check(domainClasses);
     }
@@ -50,7 +48,7 @@ class DomainExceptionsFrameworkIndependentPropertyTest {
             .that().resideInAPackage("..domain.exception..")
             .should().beAssignableTo("jakarta.ws.rs.WebApplicationException")
             .orShould().beAssignableTo("javax.ws.rs.WebApplicationException")
-            .because("Domain exceptions must not extend JAX-RS exception types (Requirement 18.4)");
+            .because("Domain exceptions must not extend JAX-RS exception types");
 
         rule.check(domainClasses);
     }
@@ -61,7 +59,7 @@ class DomainExceptionsFrameworkIndependentPropertyTest {
             .that().resideInAPackage("..domain.exception..")
             .and().haveSimpleNameEndingWith("Exception")
             .should().beAssignableTo(RuntimeException.class)
-            .because("Domain exceptions should extend RuntimeException or other domain exceptions (Requirement 18.4)");
+            .because("Domain exceptions should extend RuntimeException or other domain exceptions");
 
         rule.check(domainClasses);
     }
@@ -73,7 +71,7 @@ class DomainExceptionsFrameworkIndependentPropertyTest {
             .should().beAnnotatedWith("org.springframework.web.bind.annotation.ResponseStatus")
             .orShould().beAnnotatedWith("jakarta.ws.rs.ext.Provider")
             .orShould().beAnnotatedWith("org.springframework.stereotype.Component")
-            .because("Domain exceptions must not have framework annotations (Requirement 18.4)");
+            .because("Domain exceptions must not have framework annotations");
 
         rule.check(domainClasses);
     }
@@ -86,7 +84,7 @@ class DomainExceptionsFrameworkIndependentPropertyTest {
                 "java..",
                 "..domain.."
             )
-            .because("Domain exceptions should only depend on domain types (Requirement 18.4)");
+            .because("Domain exceptions should only depend on domain types");
 
         rule.check(domainClasses);
     }

@@ -20,9 +20,9 @@ import static org.mockito.Mockito.*;
  * Unit tests for bounded context KEK isolation.
  *
  * <ul>
- *   <li>16.5: The Key_Manager SHALL maintain a separate KEK for each Bounded_Context
+ *   <li>The Key_Manager SHALL maintain a separate KEK for each Bounded_Context
  *       (Profile, Consent, Segment, Preference)</li>
- *   <li>16.10: The Key_Manager SHALL use a key namespace format:
+ *   <li>The Key_Manager SHALL use a key namespace format:
  *       {environment}.{bounded_context}.{key_type}.{key_id}</li>
  * </ul>
  */
@@ -60,7 +60,7 @@ class BoundedContextKEKIsolationTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Each bounded context gets its own KEK (Requirement 16.5)")
+    @DisplayName("Each bounded context gets its own KEK")
     void eachBoundedContext_getsItsOwnKEK() {
         UUID profileKekId = UUID.randomUUID();
         UUID consentKekId = UUID.randomUUID();
@@ -103,7 +103,7 @@ class BoundedContextKEKIsolationTest {
     }
 
     @Test
-    @DisplayName("DEK for PROFILE context uses PROFILE KEK, not CONSENT KEK (Requirement 16.5)")
+    @DisplayName("DEK for PROFILE context uses PROFILE KEK, not CONSENT KEK")
     void profileDEK_usesProfileKEK_notConsentKEK() {
         UUID profileKekId = UUID.randomUUID();
         UUID consentKekId = UUID.randomUUID();
@@ -148,7 +148,7 @@ class BoundedContextKEKIsolationTest {
     }
 
     @Test
-    @DisplayName("Rotating KEK for one context does not affect other contexts (Requirement 16.5)")
+    @DisplayName("Rotating KEK for one context does not affect other contexts")
     void rotateKEK_forOneContext_doesNotAffectOtherContexts() {
         UUID profileKekId = UUID.randomUUID();
         UUID consentKekId = UUID.randomUUID();
@@ -182,7 +182,7 @@ class BoundedContextKEKIsolationTest {
     }
 
     @Test
-    @DisplayName("getActiveDEK for different contexts returns DEKs with different KEKs (Requirement 16.5)")
+    @DisplayName("getActiveDEK for different contexts returns DEKs with different KEKs")
     void getActiveDEK_differentContexts_returnsDEKsWithDifferentKEKs() {
         UUID profileKekId = UUID.randomUUID();
         UUID segmentKekId = UUID.randomUUID();
@@ -212,7 +212,7 @@ class BoundedContextKEKIsolationTest {
         assertNotEquals(
                 profileActiveDEK.getValue().orElseThrow().getKekId(),
                 segmentActiveDEK.getValue().orElseThrow().getKekId(),
-                "Active DEKs for different contexts must use different KEKs (Requirement 16.5)");
+                "Active DEKs for different contexts must use different KEKs");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ class BoundedContextKEKIsolationTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("KEK namespace follows {environment}.{bounded_context}.kek.{key_id} (Requirement 16.10)")
+    @DisplayName("KEK namespace follows {environment}.{bounded_context}.kek.{key_id}")
     void kekNamespace_followsRequiredFormat_forAllContexts() {
         BoundedContext[] contexts = BoundedContext.values();
         UUID[] kekIds = new UUID[contexts.length];
@@ -260,7 +260,7 @@ class BoundedContextKEKIsolationTest {
     }
 
     @Test
-    @DisplayName("DEK namespace follows {environment}.{bounded_context}.dek.context.{key_id} (Requirement 16.10)")
+    @DisplayName("DEK namespace follows {environment}.{bounded_context}.dek.context.{key_id}")
     void dekNamespace_followsRequiredFormat_forAllContexts() {
         BoundedContext[] contexts = BoundedContext.values();
 
@@ -300,7 +300,7 @@ class BoundedContextKEKIsolationTest {
     }
 
     @Test
-    @DisplayName("PROFILE and CONSENT KEK namespaces differ in bounded context segment (Requirement 16.10)")
+    @DisplayName("PROFILE and CONSENT KEK namespaces differ in bounded context segment")
     void kekNamespaces_differByBoundedContextSegment() {
         UUID profileKekId = UUID.randomUUID();
         UUID consentKekId = UUID.randomUUID();

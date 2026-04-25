@@ -10,8 +10,7 @@ import java.security.NoSuchAlgorithmException;
  * Detects and reports AES-NI hardware acceleration availability.
  *
  * <p>AES-NI is used automatically by the JVM's SunJCE provider on x86/x64 hardware
- * that supports it. This class makes that detection explicit and verifiable at startup
- * (Requirement 10.9).
+ * that supports it. This class makes that detection explicit and verifiable at startup.
  *
  * <p>This is a plain utility class with no Spring dependencies.
  */

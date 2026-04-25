@@ -127,9 +127,9 @@ mvn test -pl pcm-infrastructure-spring -Dtest=DatabaseIVCounterStorageTest
 
 ## Requirements Satisfied
 
-- **Requirement 1.8**: Counter state persisted every 1000 increments
-- **Requirement 1.9**: Counter overflow detection at 2^31
-- **Requirement 1.10**: Overflow prevents encryption until DEK rotation
+- Counter state persisted every 1000 increments
+- Counter overflow detection at 2^31
+- Overflow prevents encryption until DEK rotation
 
 ## Migration from In-Memory to Database
 

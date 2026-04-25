@@ -361,6 +361,21 @@ class ReEncryptionUsesActiveKeyPropertyTest {
         public Result<KMSHealth, KMSError> healthCheck() {
             return Result.success(KMSHealth.healthy(0L));
         }
+
+        @Override
+        public Result<Unit, KMSError> storeSecret(java.util.UUID secretId, String secretValue, java.util.UUID kekId) {
+            return Result.success(Unit.unit());
+        }
+
+        @Override
+        public Result<String, KMSError> retrieveSecret(java.util.UUID secretId, java.util.UUID kekId) {
+            return Result.failure(KMSError.of("NOT_IMPLEMENTED", "retrieveSecret not implemented in stub"));
+        }
+
+        @Override
+        public Result<Unit, KMSError> deleteSecret(java.util.UUID secretId) {
+            return Result.success(Unit.unit());
+        }
     }
 
     /**

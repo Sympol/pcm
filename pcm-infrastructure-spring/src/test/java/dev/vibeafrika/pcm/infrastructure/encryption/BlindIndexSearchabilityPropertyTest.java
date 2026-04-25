@@ -13,8 +13,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p><b>Property 14: Blind Index Searchability</b>
  *
- * <p><b>Validates: Requirements 6.2</b>
- *
  * <p>For any plaintext value and its blind index, searching by the blind index shall
  * return records containing that plaintext value. Concretely:
  * <ul>
@@ -33,8 +31,6 @@ class BlindIndexSearchabilityPropertyTest {
      * Property 14a: For any plaintext and record salt, generating the blind index twice
      * must produce the same value. This is the core searchability guarantee: a stored
      * blind index can be reproduced at query time to find the matching record.
-     *
-     * <p><b>Validates: Requirements 6.2</b>
      */
     @Property(tries = 300)
     @Label("Property 14a: Same plaintext and salt always produce the same blind index")
@@ -67,8 +63,6 @@ class BlindIndexSearchabilityPropertyTest {
      * Property 14b: For any two distinct plaintext values with the same record salt,
      * their blind indexes must differ. This ensures that searching by a blind index
      * does not return records with different plaintext values.
-     *
-     * <p><b>Validates: Requirements 6.2</b>
      */
     @Property(tries = 200)
     @Label("Property 14b: Different plaintexts with same salt produce different blind indexes")
@@ -104,8 +98,6 @@ class BlindIndexSearchabilityPropertyTest {
      * value must equal the blind index generated from its uppercase variant.
      * This ensures that searching by email is case-insensitive, as required by
      * the normalization (lowercase + trim) applied inside BlindIndexService.
-     *
-     * <p><b>Validates: Requirements 6.2</b>
      */
     @Property(tries = 200)
     @Label("Property 14c: Blind index is case-insensitive (normalization is consistent)")
@@ -141,8 +133,6 @@ class BlindIndexSearchabilityPropertyTest {
      * value must equal the blind index generated from a version with leading/trailing
      * whitespace added. This ensures that search queries with accidental whitespace
      * still find the correct record.
-     *
-     * <p><b>Validates: Requirements 6.2</b>
      */
     @Property(tries = 200)
     @Label("Property 14d: Blind index ignores leading/trailing whitespace (trim normalization)")

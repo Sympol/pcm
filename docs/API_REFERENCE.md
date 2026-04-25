@@ -1,32 +1,54 @@
-# API Reference & Curl Examples
+# API Reference
 
-This document provide a comprehensive reference for the PCM (Profile & Consent Manager) REST APIs, including expected payloads and `curl` examples.
+This document provides a comprehensive reference for the PCM (Profile & Consent Manager) REST API, including expected payloads and `curl` examples.
 
-## Base Infrastructure
-| Service | Port | Description |
-| :--- | :--- | :--- |
-| **API Gateway** | `9880` | Entry point (Auth & Aggregation) |
-| **Profile Service** | `18081` | PII & Identity Management |
-| **Preference Service** | `18082` | UX & Application Settings |
-| **Consent Service** | `18083` | Consent Ledger & GDPR Compliance |
-| **Segment Service** | `18084` | User Classification |
+PCM is a **modular monolith** — all bounded contexts are served by a single Spring Boot application on a single port.
+
+## Base URL
+
+| Environment | Base URL |
+|-------------|----------|
+| Local development | `http://localhost:8080` |
+| Docker Compose | `http://localhost:8080` |
 
 ---
 
 ## Authentication & Headers
-- **X-Tenant-Id**: Required for all requests. Default is `default`.
-- **Authorization**: Bearer token required for Gateway endpoints (Keycloak JWT).
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `X-Tenant-Id` | Yes | Tenant identifier. Use `default` for local development. |
+| `Authorization` | Production only | `Bearer <JWT>` — Keycloak-issued JWT token. |
+| `Content-Type` | POST/PUT/PATCH | `application/json` |
 
 ---
 
-## 1. Profile Service (`:18081`)
+## Error Responses
+
+All errors follow [RFC 7807 Problem Details](https://datatracker.ietf.org/doc/html/rfc7807) with `Content-Type: application/problem+json`.
+
+```json
+{
+  "type": "https://pcm.vibeafrika.dev/errors/not-found",
+  "title": "Resource Not Found",
+  "status": 404,
+  "detail": "Consent with id '550e8400-...' not found",
+  "instance": "/api/v1/consents/550e8400-...",
+  "timestamp": "2026-04-25T10:00:00Z"
+}
+```
+
+---
+
+## 1. Profile API
 
 ### Create a Profile
-Used to initialize a new user record.
 
-**Endpoint**: `POST /api/v1/profiles`
+**`POST /api/v1/profiles`**
 
-**Payload**:
+Creates a new user profile. The `handle` must be unique per tenant (3–30 lowercase alphanumeric characters).
+
+**Request body:**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -39,140 +61,341 @@ Used to initialize a new user record.
 }
 ```
 
-**Curl**:
+**Response:** `201 Created`
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "handle": "jdoe",
+  "tenantId": "default",
+  "attributes": { "fullName": "John Doe", "email": "john.doe@example.com", "country": "FR" },
+  "deleted": false,
+  "createdAt": "2026-04-25T10:00:00Z",
+  "updatedAt": "2026-04-25T10:00:00Z",
+  "version": 0
+}
+```
+
 ```bash
-curl -X POST http://localhost:18081/api/v1/profiles \
+curl -X POST http://localhost:8080/api/v1/profiles \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -d '{
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "handle": "jdoe",
-    "attributes": {
-      "fullName": "John Doe",
-      "email": "john.doe@example.com",
-      "country": "FR"
-    }
+    "attributes": { "fullName": "John Doe", "email": "john.doe@example.com" }
   }'
-```
-
-### Get Profile
-Retrieve a profile. Sensitive attributes are decrypted automatically if Vault is enabled.
-
-**Endpoint**: `GET /api/v1/profiles/{id}`
-
-**Curl**:
-```bash
-curl http://localhost:18081/api/v1/profiles/550e8400-e29b-41d4-a716-446655440000 \
-  -H "X-Tenant-Id: default"
 ```
 
 ---
 
-## 2. Consent Service (`:18083`)
+### Get a Profile
 
-### Grant Consent
-Records a positive consent action in the ledger.
+**`GET /api/v1/profiles/{id}`**
 
-**Endpoint**: `POST /api/v1/consents/{profileId}/grant`
+Retrieves a profile by ID. Encrypted PII attributes are decrypted automatically.
 
-**Payload**:
+**Response:** `200 OK` — same shape as Create response.
+
+```bash
+curl http://localhost:8080/api/v1/profiles/550e8400-e29b-41d4-a716-446655440000 \
+  -H "X-Tenant-Id: default"
+```
+
+**Error codes:** `404 Not Found` if the profile does not exist, `410 Gone` if the profile has been erased.
+
+---
+
+### Update a Profile
+
+**`PUT /api/v1/profiles/{id}`**
+
+Updates the profile's attributes. Cannot update a deleted profile.
+
+**Request body:**
 ```json
 {
-  "purpose": "MARKETING",
-  "version": "v1.2",
-  "consentText": "I agree to receive marketing emails.",
-  "metadata": {
-    "source": "web-form-footer"
+  "attributes": {
+    "fullName": "John Doe Jr.",
+    "country": "BE"
   }
 }
 ```
 
-**Curl**:
+**Response:** `200 OK`
+
 ```bash
-curl -X POST http://localhost:18083/api/v1/consents/550e8400-e29b-41d4-a716-446655440000/grant \
-  -H "Content-Type: application/json" \
-  -H "X-Tenant-ID: default" \
-  -d '{
-    "purpose": "MARKETING",
-    "version": "v1.2",
-    "consentText": "I agree to receive marketing emails."
-  }'
-```
-
-### Verify Consent
-Check if a user currently has granted permission for a specific purpose.
-
-**Endpoint**: `GET /api/v1/consents/{profileId}/verify?purpose=MARKETING`
-
-**Curl**:
-```bash
-curl "http://localhost:18083/api/v1/consents/550e8400-e29b-41d4-a716-446655440000/verify?purpose=MARKETING" \
-  -H "X-Tenant-ID: default"
-```
-
----
-
-## 3. Preference Service (`:18082`)
-
-### Update Preferences
-Update key-value settings for a user.
-
-**Endpoint**: `PATCH /api/v1/preferences/{profileId}`
-
-**Payload**:
-```json
-{
-  "theme": "dark",
-  "language": "fr",
-  "notifications_enabled": "true"
-}
-```
-
-**Curl**:
-```bash
-curl -X PATCH http://localhost:18082/api/v1/preferences/550e8400-e29b-41d4-a716-446655440000 \
+curl -X PUT http://localhost:8080/api/v1/profiles/550e8400-e29b-41d4-a716-446655440000 \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
-  -d '{"theme": "dark", "language": "fr"}'
+  -d '{"attributes": {"country": "BE"}}'
 ```
 
 ---
 
-## 4. Segment Service (`:18084`)
+### Erase a Profile (GDPR Right to Erasure)
 
-### Get User Segments
-Retrieve computed segments (classification) for a user.
+**`DELETE /api/v1/profiles/{id}`**
 
-**Endpoint**: `GET /api/v1/segments/{profileId}`
+Anonymizes the profile handle, clears all PII attributes, and marks the profile as deleted. Triggers cryptographic erasure of the user's DEK.
 
-**Curl**:
+**Response:** `200 OK`
+
 ```bash
-curl http://localhost:18084/api/v1/segments/550e8400-e29b-41d4-a716-446655440000
-```
-
----
-
-## 5. API Gateway (Aggregation & Auth) (`:9880`)
-
-### Unified "Me" Endpoint
-Returns an aggregated view of the authenticated user (Profile + Preferences + Segments).
-
-**Endpoint**: `GET /api/v1/users/me` (or `GET /api/v1/me`)
-
-**Curl**:
-```bash
-curl http://localhost:9880/api/v1/users/me \
-  -H "Authorization: Bearer <JWT_TOKEN>" \
+curl -X DELETE http://localhost:8080/api/v1/profiles/550e8400-e29b-41d4-a716-446655440000 \
   -H "X-Tenant-Id: default"
 ```
 
 ---
 
+## 2. Consent API
+
+The consent context implements an **immutable ledger** — every grant and revoke is recorded as an append-only event with a cryptographic proof hash.
+
+### Grant Consent
+
+**`POST /api/v1/consents`**
+
+Records a positive consent action in the ledger.
+
+**Request body:**
+```json
+{
+  "profileId": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": "default",
+  "purpose": "MARKETING",
+  "scope": "EMAIL"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "profileId": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": "default",
+  "purpose": "MARKETING",
+  "scope": "EMAIL",
+  "status": "GRANTED",
+  "createdAt": "2026-04-25T10:00:00Z",
+  "updatedAt": "2026-04-25T10:00:00Z",
+  "version": 0
+}
+```
+
+```bash
+curl -X POST http://localhost:8080/api/v1/consents \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: default" \
+  -d '{
+    "profileId": "550e8400-e29b-41d4-a716-446655440000",
+    "tenantId": "default",
+    "purpose": "MARKETING",
+    "scope": "EMAIL"
+  }'
+```
+
+---
+
+### Revoke Consent
+
+**`DELETE /api/v1/consents/{id}`**
+
+Records a revocation event in the ledger. The consent record is not deleted — the ledger is immutable.
+
+**Response:** `200 OK` — `ConsentResponse` with `status: "REVOKED"`.
+
+```bash
+curl -X DELETE http://localhost:8080/api/v1/consents/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "X-Tenant-Id: default"
+```
+
+---
+
+### Verify Consent
+
+**`GET /api/v1/consents/verify?consentId={id}`**
+
+Returns `true` if the consent is currently active (granted and not revoked), `false` otherwise.
+
+**Response:** `200 OK` — `true` or `false`
+
+```bash
+curl "http://localhost:8080/api/v1/consents/verify?consentId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "X-Tenant-Id: default"
+```
+
+---
+
+### Get Consent History
+
+**`GET /api/v1/consents/history?consentId={id}`**
+
+Returns the full immutable ledger for a consent, including all grant and revoke events with timestamps and cryptographic proof hashes.
+
+**Response:** `200 OK`
+```json
+{
+  "consentId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "events": [
+    {
+      "eventType": "GRANTED",
+      "timestamp": "2026-04-25T10:00:00Z",
+      "proofHash": "sha256:abc123..."
+    },
+    {
+      "eventType": "REVOKED",
+      "timestamp": "2026-04-25T11:00:00Z",
+      "proofHash": "sha256:def456..."
+    }
+  ]
+}
+```
+
+```bash
+curl "http://localhost:8080/api/v1/consents/history?consentId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "X-Tenant-Id: default"
+```
+
+> **TCF Support**: IAB TCF 2.x support is available as a separate module (`pcm-tcf-adapter`). See [ADR-004](architecture/adr-004-tcf-removal.md) for the rationale.
+
+---
+
+## 3. Preference API
+
+### Create Preferences
+
+**`POST /api/v1/preferences`**
+
+Creates a preference record for a profile.
+
+**Request body:**
+```json
+{
+  "profileId": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": "default",
+  "key": "ui.theme",
+  "value": "dark"
+}
+```
+
+**Response:** `201 Created`
+
+```bash
+curl -X POST http://localhost:8080/api/v1/preferences \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Id: default" \
+  -d '{"profileId": "550e8400-...", "tenantId": "default", "key": "ui.theme", "value": "dark"}'
+```
+
+---
+
+### Get Preferences
+
+**`GET /api/v1/preferences/{id}`**
+
+Retrieves a preference record by ID.
+
+**Response:** `200 OK`
+
+```bash
+curl http://localhost:8080/api/v1/preferences/{id} \
+  -H "X-Tenant-Id: default"
+```
+
+---
+
+### Update Preferences
+
+**`PUT /api/v1/preferences/{id}`**
+
+Updates the value of an existing preference.
+
+**Request body:**
+```json
+{ "value": "light" }
+```
+
+**Response:** `200 OK`
+
+---
+
+### Delete Preferences
+
+**`DELETE /api/v1/preferences/{id}`**
+
+Deletes a preference record.
+
+**Response:** `200 OK`
+
+---
+
+## 4. Segment API
+
+### Create a Segment
+
+**`POST /api/v1/segments`**
+
+Creates a new user segment with evaluation criteria.
+
+**Request body:**
+```json
+{
+  "name": "high-value-users",
+  "tenantId": "default",
+  "criteria": [
+    { "field": "country", "operator": "EQUALS", "value": "FR" }
+  ]
+}
+```
+
+**Response:** `201 Created`
+
+---
+
+### Get a Segment
+
+**`GET /api/v1/segments/{id}`**
+
+Retrieves a segment by ID.
+
+**Response:** `200 OK`
+
+---
+
+### Evaluate a Segment
+
+**`POST /api/v1/segments/{id}/evaluate`**
+
+Evaluates whether a profile matches the segment criteria.
+
+**Request body:**
+```json
+{ "profileId": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+**Response:** `200 OK` — `true` or `false`
+
+---
+
 ## Purpose Reference
-Standard values for `purpose` in Consent & Segments:
-- `MARKETING`
-- `ANALYTICS`
-- `PERSONALIZATION`
-- `THIRD_PARTY_SHARING`
-- `TERMS_AND_CONDITIONS`
-- `PRIVACY_POLICY`
+
+Standard values for `purpose` in the Consent API:
+
+| Value | Description |
+|-------|-------------|
+| `MARKETING` | Marketing communications |
+| `ANALYTICS` | Usage analytics and statistics |
+| `PERSONALIZATION` | Personalized content and recommendations |
+| `THIRD_PARTY_SHARING` | Sharing data with third parties |
+| `TERMS_AND_CONDITIONS` | Acceptance of terms and conditions |
+| `PRIVACY_POLICY` | Acceptance of privacy policy |
+
+---
+
+## Actuator & Health
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /actuator/health` | Application health status |
+| `GET /actuator/info` | Application version and build info |
+| `GET /actuator/metrics` | Prometheus-compatible metrics |

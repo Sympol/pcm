@@ -7,8 +7,7 @@ import java.util.UUID;
  * JPA entity for persisting IV counter state.
  * 
  * This entity stores the counter state for each DEK to ensure IV uniqueness
- * across application restarts. The counter is persisted every 1000 increments
- * as specified in requirement 1.8.
+ * across application restarts. The counter is persisted every 1000 increments.
  */
 @Entity
 @Table(name = "encryption_iv_counter_state", indexes = {

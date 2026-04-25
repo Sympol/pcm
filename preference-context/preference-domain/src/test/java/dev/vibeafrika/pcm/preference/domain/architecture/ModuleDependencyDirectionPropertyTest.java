@@ -12,8 +12,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Property-based test for module dependency direction.
  * 
- * **Validates: Requirements 9.2, 9.3, 9.4**
- * 
  * Feature: framework-agnostic-domain, Property 10: Module Dependency Direction
  * 
  * This test verifies that:
@@ -38,7 +36,7 @@ class ModuleDependencyDirectionPropertyTest {
         ArchRule rule = noClasses()
             .that().resideInAPackage("..domain..")
             .should().dependOnClassesThat().resideInAPackage("..application..")
-            .because("Domain module must not depend on application module (Requirement 9.3)");
+            .because("Domain module must not depend on application module");
 
         rule.check(allClasses);
     }
@@ -48,7 +46,7 @@ class ModuleDependencyDirectionPropertyTest {
         ArchRule rule = noClasses()
             .that().resideInAPackage("..domain..")
             .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
-            .because("Domain module must not depend on infrastructure module (Requirement 9.3)");
+            .because("Domain module must not depend on infrastructure module");
 
         rule.check(allClasses);
     }
@@ -58,7 +56,7 @@ class ModuleDependencyDirectionPropertyTest {
         ArchRule rule = noClasses()
             .that().resideInAPackage("..application..")
             .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
-            .because("Application module must not depend on infrastructure module (Requirement 9.4)")
+            .because("Application module must not depend on infrastructure module")
             .allowEmptyShould(true);  // Allow empty if application classes not in classpath
 
         rule.check(allClasses);
@@ -74,7 +72,7 @@ class ModuleDependencyDirectionPropertyTest {
                 "dev.vibeafrika.pcm.domain..",  // Shared domain concepts
                 "io.github.sympol.pure.."  // pure-assert
             )
-            .because("Domain module must have zero external dependencies (Requirement 9.2)");
+            .because("Domain module must have zero external dependencies");
 
         rule.check(allClasses);
     }
@@ -89,7 +87,7 @@ class ModuleDependencyDirectionPropertyTest {
                 "dev.vibeafrika.pcm.preference.application..",
                 "dev.vibeafrika.pcm.domain.."  // Shared domain concepts
             )
-            .because("Application module must only depend on domain module (Requirement 9.4)")
+            .because("Application module must only depend on domain module")
             .allowEmptyShould(true);  // Allow empty if application classes not in classpath
 
         rule.check(allClasses);

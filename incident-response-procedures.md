@@ -28,4 +28,6 @@ The system is designed to degrade gracefully and resume normal operations upon r
 To report a vulnerability or suspected incident, please follow the process described in
 [SECURITY.md](SECURITY.md).
 
-The detailed operational runbook is maintained internally and is not published in this repository.
+For operators deploying PCM, a detailed guide covering key compromise response, data breach
+handling, KMS outage procedures, and GDPR notification obligations is available in
+[docs/operations/incident-response.md](docs/operations/incident-response.md).

@@ -11,8 +11,6 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Property-based test for domain tests running without framework context.
  * 
- * **Validates: Requirements 8.3, 8.4, 8.5**
- * 
  * Feature: framework-agnostic-domain, Property 23: Domain Tests Run Without Framework Context
  * 
  * This test verifies that:
@@ -37,7 +35,7 @@ class DomainTestsRunWithoutFrameworkPropertyTest {
             .should().beAnnotatedWith("org.springframework.boot.test.context.SpringBootTest")
             .orShould().beAnnotatedWith("org.springframework.test.context.junit.jupiter.SpringExtension")
             .orShould().beAnnotatedWith("org.springframework.test.context.ContextConfiguration")
-            .because("Domain tests must run without Spring test context (Requirement 8.3)");
+            .because("Domain tests must run without Spring test context");
 
         rule.check(domainTestClasses);
     }
@@ -48,7 +46,7 @@ class DomainTestsRunWithoutFrameworkPropertyTest {
             .that().resideInAPackage("..domain..")
             .should().beAnnotatedWith("org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest")
             .orShould().beAnnotatedWith("org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase")
-            .because("Domain tests must not require database connections (Requirement 8.4)");
+            .because("Domain tests must not require database connections");
 
         rule.check(domainTestClasses);
     }
@@ -59,7 +57,7 @@ class DomainTestsRunWithoutFrameworkPropertyTest {
             .that().resideInAPackage("..domain..")
             .should().beAnnotatedWith("io.quarkus.test.junit.QuarkusTest")
             .orShould().beAnnotatedWith("io.quarkus.test.junit.QuarkusTestProfile")
-            .because("Domain tests must run without Quarkus test context (Requirement 8.3)");
+            .because("Domain tests must run without Quarkus test context");
 
         rule.check(domainTestClasses);
     }
@@ -71,7 +69,7 @@ class DomainTestsRunWithoutFrameworkPropertyTest {
             .should().dependOnClassesThat().resideInAnyPackage(
                 "org.testcontainers.."
             )
-            .because("Domain tests must not require database containers (Requirement 8.4)");
+            .because("Domain tests must not require database containers");
 
         rule.check(domainTestClasses);
     }
@@ -84,7 +82,7 @@ class DomainTestsRunWithoutFrameworkPropertyTest {
                 "org.springframework.test..",
                 "org.springframework.boot.test.."
             )
-            .because("Domain tests must not depend on Spring test framework (Requirement 8.3)");
+            .because("Domain tests must not depend on Spring test framework");
 
         rule.check(domainTestClasses);
     }
@@ -103,7 +101,7 @@ class DomainTestsRunWithoutFrameworkPropertyTest {
                 "com.tngtech.archunit..",  // ArchUnit for architecture validation
                 "..domain.."
             )
-            .because("Domain tests should only use JUnit, jqwik, and AssertJ (Requirement 8.3, 8.5)");
+            .because("Domain tests should only use JUnit, jqwik, and AssertJ)");
 
         rule.check(domainTestClasses);
     }

@@ -106,6 +106,36 @@ public interface IKMSClient {
     Result<Unit, KMSError> deleteDEK(UUID keyId);
 
     /**
+     * Stores an opaque secret value in KMS, encrypted at rest.
+     *
+     * <p>Used for non-cryptographic secrets (API tokens, database credentials,
+     * service secrets) that must be managed with the same rigor as DEKs.
+     *
+     * @param secretId    a unique identifier for the secret
+     * @param secretValue the plaintext secret value to store
+     * @param kekId       the KEK used to encrypt the secret in KMS
+     * @return Result containing Unit on success, or KMSError if storage fails
+     */
+    Result<Unit, KMSError> storeSecret(java.util.UUID secretId, String secretValue, java.util.UUID kekId);
+
+    /**
+     * Retrieves and decrypts a secret value from KMS.
+     *
+     * @param secretId the unique identifier of the secret
+     * @param kekId    the KEK used to decrypt the secret
+     * @return Result containing the plaintext secret value, or KMSError if retrieval fails
+     */
+    Result<String, KMSError> retrieveSecret(java.util.UUID secretId, java.util.UUID kekId);
+
+    /**
+     * Deletes a secret from KMS, making it permanently unrecoverable.
+     *
+     * @param secretId the unique identifier of the secret to delete
+     * @return Result containing Unit on success, or KMSError if deletion fails
+     */
+    Result<Unit, KMSError> deleteSecret(java.util.UUID secretId);
+
+    /**
      * Checks the health and availability of the KMS.
      * 
      * <p>This method is used for:

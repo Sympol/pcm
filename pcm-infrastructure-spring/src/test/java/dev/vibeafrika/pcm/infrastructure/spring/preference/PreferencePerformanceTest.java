@@ -138,7 +138,7 @@ class PreferencePerformanceTest {
     }
 
     // -------------------------------------------------------------------------
-    // Test 1: POST latency — Validates Requirement 17.1
+    // Test 1: POST latency 
     // -------------------------------------------------------------------------
 
     @Test
@@ -159,11 +159,11 @@ class PreferencePerformanceTest {
 
         long p95 = percentile(samples, 95);
         assertTrue(p95 < POST_P95_THRESHOLD_MS,
-            String.format("POST p95 latency %dms exceeds threshold of %dms (Requirement 17.1)", p95, POST_P95_THRESHOLD_MS));
+            String.format("POST p95 latency %dms exceeds threshold of %dms", p95, POST_P95_THRESHOLD_MS));
     }
 
     // -------------------------------------------------------------------------
-    // Test 2: GET latency — Validates Requirement 17.1
+    // Test 2: GET latency
     // -------------------------------------------------------------------------
 
     @Test
@@ -187,11 +187,11 @@ class PreferencePerformanceTest {
 
         long p95 = percentile(samples, 95);
         assertTrue(p95 < GET_P95_THRESHOLD_MS,
-            String.format("GET p95 latency %dms exceeds threshold of %dms (Requirement 17.1)", p95, GET_P95_THRESHOLD_MS));
+            String.format("GET p95 latency %dms exceeds threshold of %dms", p95, GET_P95_THRESHOLD_MS));
     }
 
     // -------------------------------------------------------------------------
-    // Test 3: Throughput — Validates Requirement 17.2
+    // Test 3: Throughput 
     // -------------------------------------------------------------------------
 
     @Test
@@ -221,6 +221,6 @@ class PreferencePerformanceTest {
                 String.format("%.2f", rps), THROUGHPUT_REQUESTS, elapsedMs);
 
         assertTrue(rps > THROUGHPUT_MIN_RPS,
-            String.format("GET throughput %.2f req/s is below minimum of %.1f req/s (Requirement 17.2)", rps, THROUGHPUT_MIN_RPS));
+            String.format("GET throughput %.2f req/s is below minimum of %.1f req/s", rps, THROUGHPUT_MIN_RPS));
     }
 }
