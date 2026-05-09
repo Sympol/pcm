@@ -28,6 +28,16 @@
             <artifactId>profile-application</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>dev.vibe-afrika</groupId>
+            <artifactId>consent-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.vibe-afrika</groupId>
+            <artifactId>preference-domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Framework dependencies (provided by unified infrastructure) -->
         <dependency>

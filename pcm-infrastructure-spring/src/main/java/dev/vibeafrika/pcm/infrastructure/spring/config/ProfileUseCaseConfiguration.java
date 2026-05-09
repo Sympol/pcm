@@ -1,8 +1,8 @@
 package dev.vibeafrika.pcm.infrastructure.spring.config;
 
-import dev.vibeafrika.pcm.consent.domain.repository.ConsentRepository;
-import dev.vibeafrika.pcm.preference.domain.repository.PreferenceRepository;
+import dev.vibeafrika.pcm.profile.application.port.ConsentProvider;
 import dev.vibeafrika.pcm.profile.application.port.EventPublisher;
+import dev.vibeafrika.pcm.profile.application.port.PreferenceProvider;
 import dev.vibeafrika.pcm.profile.application.usecase.*;
 import dev.vibeafrika.pcm.profile.domain.repository.ProfileRepository;
 import org.springframework.context.annotation.Bean;
@@ -43,8 +43,8 @@ public class ProfileUseCaseConfiguration {
     @Bean
     public ExportProfileDataUseCase exportProfileDataUseCase(
             ProfileRepository profileRepository,
-            ConsentRepository consentRepository,
-            PreferenceRepository preferenceRepository) {
-        return new ExportProfileDataUseCase(profileRepository, consentRepository, preferenceRepository);
+            ConsentProvider consentProvider,
+            PreferenceProvider preferenceProvider) {
+        return new ExportProfileDataUseCase(profileRepository, consentProvider, preferenceProvider);
     }
 }
