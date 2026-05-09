@@ -1,8 +1,9 @@
 package dev.vibeafrika.pcm.profile.application.usecase;
 
-import dev.vibeafrika.pcm.consent.domain.repository.ConsentRepository;
-import dev.vibeafrika.pcm.preference.domain.repository.PreferenceRepository;
 import dev.vibeafrika.pcm.profile.application.dto.ProfileDataExportResponse;
+import dev.vibeafrika.pcm.profile.application.port.ConsentProvider;
+import dev.vibeafrika.pcm.profile.application.port.PreferenceProvider;
+import dev.vibeafrika.pcm.profile.domain.exception.ProfileDeletedException;
 import dev.vibeafrika.pcm.profile.domain.exception.ProfileNotFoundException;
 import dev.vibeafrika.pcm.profile.domain.model.Profile;
 import dev.vibeafrika.pcm.profile.domain.model.ProfileId;
@@ -22,16 +23,16 @@ import java.util.UUID;
  */
 public class ExportProfileDataUseCase {
     private final ProfileRepository profileRepository;
-    private final ConsentRepository consentRepository;
-    private final PreferenceRepository preferenceRepository;
+    private final ConsentProvider consentProvider;
+    private final PreferenceProvider preferenceProvider;
 
     public ExportProfileDataUseCase(
             ProfileRepository profileRepository,
-            ConsentRepository consentRepository,
-            PreferenceRepository preferenceRepository) {
+            ConsentProvider consentProvider,
+            PreferenceProvider preferenceProvider) {
         this.profileRepository = profileRepository;
-        this.consentRepository = consentRepository;
-        this.preferenceRepository = preferenceRepository;
+        this.consentProvider = consentProvider;
+        this.preferenceProvider = preferenceProvider;
     }
 
     /**
@@ -50,37 +51,15 @@ public class ExportProfileDataUseCase {
         Profile profile = profileRepository.findByIdAndTenant(profileId, tenantId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
 
-        // 2. Fetch all consents for this profile
-        var consents = consentRepository.findByProfile(dev.vibeafrika.pcm.consent.domain.model.ProfileId.of(profileId.getValue()))
-                .stream()
-                .map(consent -> new ProfileDataExportResponse.ConsentExportEntry(
-                        consent.getId().getValue(),
-                        consent.getPurpose().getValue(),
-                        consent.getScope().getValue(),
-                        consent.getStatus().name(),
-                        consent.getCreatedAt().toString(),
-                        consent.getUpdatedAt().toString(),
-                        consent.getHistory().stream()
-                                .map(event -> new ProfileDataExportResponse.ConsentEventEntry(
-                                        event.getStatus().name(),
-                                        event.getTimestamp().toString()
-                                ))
-                                .toList()
-                ))
-                .toList();
+        if (profile.isDeleted()) {
+            throw new ProfileDeletedException("Cannot export data for an erased profile");
+        }
 
-        // 3. Fetch preferences for this profile
-        var preferences = preferenceRepository.findByProfileIdAndTenant(
-                        dev.vibeafrika.pcm.preference.domain.model.ProfileId.of(profileId.getValue()),
-                        dev.vibeafrika.pcm.preference.domain.model.TenantId.of(tenantIdStr))
-                .map(pref -> new ProfileDataExportResponse.PreferenceExportEntry(
-                        pref.getId().getValue(),
-                        pref.getSettings(),
-                        pref.getLastUpdated().toString(),
-                        pref.getLastUpdated().toString()
-                ))
-                .stream()
-                .toList();
+        // 2. Fetch all consents for this profile via port
+        var consents = consentProvider.getConsentsForProfile(profileId.getValue());
+
+        // 3. Fetch preferences for this profile via port
+        var preferences = preferenceProvider.getPreferencesForProfile(profileId.getValue(), tenantId.getValue());
 
         // 4. Build the export response
         return new ProfileDataExportResponse(
