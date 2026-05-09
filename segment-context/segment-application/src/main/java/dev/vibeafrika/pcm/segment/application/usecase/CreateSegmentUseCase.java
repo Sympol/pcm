@@ -2,7 +2,6 @@ package dev.vibeafrika.pcm.segment.application.usecase;
 
 import dev.vibeafrika.pcm.segment.application.dto.CreateSegmentRequest;
 import dev.vibeafrika.pcm.segment.application.dto.SegmentResponse;
-import dev.vibeafrika.pcm.segment.domain.exception.InvalidSegmentCriteriaException;
 import dev.vibeafrika.pcm.segment.domain.model.ProfileId;
 import dev.vibeafrika.pcm.segment.domain.model.Segment;
 import dev.vibeafrika.pcm.segment.domain.model.TenantId;

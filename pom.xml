@@ -480,7 +480,7 @@
                         <!-- Fail build on CVSS score >= 7 (High/Critical) -->
                         <failBuildOnCVSS>7</failBuildOnCVSS>
                         <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
-                        <suppressionFile>${project.basedir}/.github/owasp-suppressions.xml</suppressionFile>
+                        <suppressionFile>${maven.multiModuleProjectDirectory}/.github/owasp-suppressions.xml</suppressionFile>
                         <formats>
                             <format>HTML</format>
                             <format>JSON</format>
@@ -505,7 +505,7 @@
                                 <version>1.13.0</version>
                             </plugin>
                         </plugins>
-                        <excludeFilterFile>${project.basedir}/.github/spotbugs-exclude.xml</excludeFilterFile>
+                        <excludeFilterFile>${maven.multiModuleProjectDirectory}/.github/spotbugs-exclude.xml</excludeFilterFile>
                     </configuration>
                 </plugin>
 
