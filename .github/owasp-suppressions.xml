@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWASP Dependency-Check suppression file.
+  Add false-positive CVE suppressions here with justification and expiry date.
+  — Each suppression must be reviewed quarterly.
+
+  Format:
+  <suppress until="YYYY-MM-DD">
+    <notes>Justification: why this is a false positive or accepted risk.</notes>
+    <cve>CVE-XXXX-XXXXX</cve>
+  </suppress>
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+  <!--
+    Example suppression template — remove and replace with real entries as needed.
+    <suppress until="2026-10-01">
+      <notes>False positive: CVE applies to the CLI tool, not the library. Reviewed 2026-04-26.</notes>
+      <cve>CVE-2024-12345</cve>
+    </suppress>
+  -->
+
+</suppressions>

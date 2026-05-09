@@ -3,49 +3,13 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # Profile Service
-  - job_name: 'profile-service'
+  # PCM modular monolith
+  - job_name: 'pcm'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8081']
+      - targets: ['pcm:8080']
 
-  # Consent Service
-  - job_name: 'consent-service'
-    metrics_path: '/actuator/prometheus'
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8082']
-
-  # Segment Service
-  - job_name: 'segment-service'
-    metrics_path: '/q/metrics'
-    static_configs:
-      - targets: ['host.docker.internal:8083']
-
-  # Preference Service
-  - job_name: 'preference-service'
-    metrics_path: '/q/metrics'
-    static_configs:
-      - targets: ['host.docker.internal:8084']
-
-  # API Gateway
-  - job_name: 'api-gateway'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['host.docker.internal:8080']
-
-  # Infrastructure
-  - job_name: 'postgresql'
-    static_configs:
-      - targets: ['postgresql:5432']
-
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-
-  - job_name: 'kafka'
-    static_configs:
-      - targets: ['kafka:9092']
-
-  - job_name: 'elasticsearch'
-    static_configs:
-      - targets: ['elasticsearch:9200']
+      - targets: ['localhost:9090']

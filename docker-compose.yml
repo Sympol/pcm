@@ -1,317 +1,85 @@
-
 services:
-  # Config Service - Centralized configuration
-  config-service:
-    build: ./config-service
-    image: pcm-config-service:latest
-    container_name: pcm-config-service
+
+  # ── PCM Application (modular monolith) ──────────────────────────────────────
+  pcm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: pcm:latest
+    container_name: pcm
     ports:
-      - "8888:8888"
+      - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=native
+      SPRING_PROFILES_ACTIVE: dev
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/${POSTGRES_DB:-pcm}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-pcm}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Vault
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN_ID}
+      # Encryption
+      ENCRYPTION_ENVIRONMENT: ${ENCRYPTION_ENVIRONMENT:-DEV}
+      BLIND_INDEX_GLOBAL_SALT: ${BLIND_INDEX_GLOBAL_SALT}
+      KMS_PROVIDER: ${KMS_PROVIDER:-}
+      KMS_ENDPOINT: ${KMS_ENDPOINT:-}
+      KMS_MTLS_ENABLED: ${KMS_MTLS_ENABLED:-false}
+      AUDIT_LOG_LEVEL: ${AUDIT_LOG_LEVEL:-HIGH}
+      # Observability
+      MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     networks:
       - pcm-network
+    restart: unless-stopped
 
-  # Profile Service
-  profile-service:
-    build: ./profile-service
-    image: pcm-profile-service:latest
-    container_name: pcm-profile-service
-    ports:
-      - "18081:18081"
-      - "19091:19091"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - CONFIG_SERVICE_URL=http://config-service:8888
-      - DB_HOST=postgresql
-      - DB_PORT=5432
-      - DB_USERNAME=pcm
-      - DB_PASSWORD=pcm_dev_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    depends_on:
-      config-service:
-        condition: service_healthy
-      postgresql:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - pcm-network
-
-  # Preference Service
-  preference-service:
-    build: ./preference-service
-    image: pcm-preference-service:latest
-    container_name: pcm-preference-service
-    ports:
-      - "18082:18082"
-      - "19092:19092"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - CONFIG_SERVICE_URL=http://config-service:8888
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    depends_on:
-      config-service:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - pcm-network
-
-  # Consent Service
-  consent-service:
-    build: ./consent-service
-    image: pcm-consent-service:latest
-    container_name: pcm-consent-service
-    ports:
-      - "18083:18083"
-      - "19093:19093"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - CONFIG_SERVICE_URL=http://config-service:8888
-      - DB_HOST=postgresql
-      - DB_PORT=5432
-      - DB_USERNAME=pcm
-      - DB_PASSWORD=pcm_dev_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    depends_on:
-      config-service:
-        condition: service_healthy
-      postgresql:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - pcm-network
-
-  # Segment Service
-  segment-service:
-    build: ./segment-service
-    image: pcm-segment-service:latest
-    container_name: pcm-segment-service
-    ports:
-      - "18084:18084"
-      - "19094:19094"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - CONFIG_SERVICE_URL=http://config-service:8888
-      - ELASTICSEARCH_URIS=http://elasticsearch:9200
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    depends_on:
-      config-service:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - pcm-network
-
-  # API Gateway
-  api-gateway:
-    build: ./api-gateway
-    image: pcm-api-gateway:latest
-    container_name: pcm-api-gateway
-    ports:
-      - "8080:9880"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - CONFIG_SERVICE_URL=http://config-service:8888
-      - PROFILE_SERVICE_URL=http://profile-service:18081
-      - CONSENT_SERVICE_URL=http://consent-service:18083
-      - JWT_ISSUER_URI=http://keycloak:8080/realms/pcm
-    depends_on:
-      config-service:
-        condition: service_healthy
-      profile-service:
-        condition: service_started
-      consent-service:
-        condition: service_started
-      keycloak:
-        condition: service_healthy
-    networks:
-      - pcm-network
-
-  # PostgreSQL - Main database for Profile and Consent services
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgresql:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: pcm-postgresql
     environment:
-      POSTGRES_USER: pcm
-      POSTGRES_PASSWORD: pcm_dev_password
-      POSTGRES_DB: pcm
+      POSTGRES_USER: ${POSTGRES_USER:-pcm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-pcm}
     ports:
-      - "8843:5432"
+      - "5432:5432"
     volumes:
       - postgresql_data:/var/lib/postgresql/data
-      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pcm"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pcm} -d ${POSTGRES_DB:-pcm}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - pcm-network
+    restart: unless-stopped
 
-  # Redis - Caching layer
-  redis:
-    image: redis:7-alpine
-    container_name: pcm-redis
-    ports:
-      - "6779:6379"
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - pcm-network
-
-  # Zookeeper - Required for Kafka
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.3
-    container_name: pcm-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_logs:/var/lib/zookeeper/log
-    networks:
-      - pcm-network
-
-  # Kafka - Event streaming platform
-  kafka:
-    image: confluentinc/cp-kafka:7.5.3
-    container_name: pcm-kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-      - "9093:9093"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    networks:
-      - pcm-network
-
-  # Schema Registry - Avro schema management
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.5.3
-    container_name: pcm-schema-registry
-    depends_on:
-      - kafka
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - pcm-network
-
-  # Elasticsearch - Search and analytics engine for Segment Service
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
-    container_name: pcm-elasticsearch
-    environment:
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.security.enabled=false
-      - xpack.security.enrollment.enabled=false
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - pcm-network
-
-  # Kibana - Visualization for Elasticsearch
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.3
-    container_name: pcm-kibana
-    ports:
-      - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    depends_on:
-      - elasticsearch
-    networks:
-      - pcm-network
-
-  # Logstash - Log aggregation and processing
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.11.3
-    container_name: pcm-logstash
-    ports:
-      - "5044:5044"
-      - "9600:9600"
-    volumes:
-      - ./docker/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
-    environment:
-      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
-      - ENVIRONMENT=development
-    depends_on:
-      - elasticsearch
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9600/_node/stats || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - pcm-network
-
-  # HashiCorp Vault - Secrets management and PII encryption
+  # ── HashiCorp Vault (dev mode) ───────────────────────────────────────────────
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.17
     container_name: pcm-vault
     ports:
       - "8200:8200"
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: pcm-dev-root-token
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID}
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
       VAULT_ADDR: http://0.0.0.0:8200
     cap_add:
       - IPC_LOCK
     volumes:
       - vault_data:/vault/data
-      - vault_logs:/vault/logs
-    command: server -dev -dev-root-token-id="pcm-dev-root-token" -dev-listen-address="0.0.0.0:8200"
+    command: server -dev -dev-root-token-id="${VAULT_DEV_ROOT_TOKEN_ID}" -dev-listen-address="0.0.0.0:8200"
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 10s
@@ -319,104 +87,11 @@ services:
       retries: 5
     networks:
       - pcm-network
+    restart: unless-stopped
 
-  # Kafka UI - Web interface for Kafka management
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: pcm-kafka-ui
-    depends_on:
-      - kafka
-      - schema-registry
-    ports:
-      - "8095:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: pcm-local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
-    networks:
-      - pcm-network
-
-  # pgAdmin - PostgreSQL management interface
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pcm-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@pcm.dev
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - pcm-network
-
-  # Prometheus - Metrics collection
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: pcm-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    networks:
-      - pcm-network
-
-  # Grafana - Metrics visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: pcm-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_INSTALL_PLUGINS: grafana-piechart-panel
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
-    depends_on:
-      - prometheus
-    networks:
-      - pcm-network
-
-  # Jaeger - Distributed tracing
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: pcm-jaeger
-    ports:
-      - "16686:16686" # UI
-      - "4317:4317"  # OTLP gRPC (internal collector)
-      - "4318:4318"  # OTLP HTTP (internal collector)
-      - "9411:9411"  # Zipkin (legacy)
-    networks:
-      - pcm-network
-
-  # OpenTelemetry Collector
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    container_name: pcm-otel-collector
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./docker/otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-      - "8888:8888" # Metrics
-    depends_on:
-      - jaeger
-      - prometheus
-    networks:
-      - pcm-network
-
-  # Keycloak - Identity and Access Management
+  # ── Keycloak (Identity & Access Management) ──────────────────────────────────
   keycloak:
-    image: quay.io/keycloak/keycloak:23.0.1
+    image: quay.io/keycloak/keycloak:25.0
     container_name: pcm-keycloak
     command: start-dev --import-realm
     environment:
@@ -425,74 +100,110 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_PORT: 8080
       KC_HTTP_RELATIVE_PATH: /auth
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     ports:
       - "8090:8080"
     volumes:
-      - ./docker/keycloak/pcm-realm.json:/opt/keycloak/data/import/pcm-realm.json
+      - ./docker/keycloak/pcm-realm.json:/opt/keycloak/data/import/pcm-realm.json:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/live"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/auth/health/live || exit 1"]
+      interval: 15s
       timeout: 5s
+      start_period: 30s
       retries: 5
     networks:
       - pcm-network
+    restart: unless-stopped
 
-  # RabbitMQ - Alternative messaging broker for portability verification
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: pcm-rabbitmq
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: pcm-prometheus
     ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
     networks:
       - pcm-network
+    restart: unless-stopped
 
-  audit-service:
-    build: ./audit-service
-    image: pcm-audit-service:latest
-    container_name: pcm-audit-service
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: pcm-grafana
     ports:
-      - "18085:18085"
+      - "3000:3000"
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - CONFIG_SERVICE_URL=http://config-service:8888
-      - DB_HOST=postgresql
-      - DB_PORT=5432
-      - DB_USERNAME=pcm
-      - DB_PASSWORD=pcm_dev_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
-      config-service:
-        condition: service_healthy
-      postgresql:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      - prometheus
+    networks:
+      - pcm-network
+    restart: unless-stopped
+
+  # ── Jaeger (distributed tracing) ─────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.59
+    container_name: pcm-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - pcm-network
+    restart: unless-stopped
+
+  # ── OpenTelemetry Collector ───────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    container_name: pcm-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./docker/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - jaeger
+      - prometheus
+    networks:
+      - pcm-network
+    restart: unless-stopped
+
+  # ── pgAdmin (optional dev tool) ───────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:8.9
+    container_name: pcm-pgadmin
+    profiles: ["tools"]   # only starts with: docker compose --profile tools up
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@pcm.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     networks:
       - pcm-network
 
 volumes:
   postgresql_data:
-  redis_data:
-  zookeeper_data:
-  zookeeper_logs:
-  kafka_data:
-  elasticsearch_data:
   vault_data:
-  vault_logs:
-  pgadmin_data:
   prometheus_data:
   grafana_data:
+  pgadmin_data:
 
 networks:
   pcm-network:

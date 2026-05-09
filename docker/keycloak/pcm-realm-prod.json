@@ -1,0 +1,94 @@
+{
+    "id": "pcm",
+    "realm": "pcm",
+    "enabled": true,
+    "sslRequired": "external",
+    "bruteForceProtected": true,
+    "permanentLockout": false,
+    "maxFailureWaitSeconds": 900,
+    "minimumQuickLoginWaitSeconds": 60,
+    "waitIncrementSeconds": 60,
+    "quickLoginCheckMilliSeconds": 1000,
+    "maxDeltaTimeSeconds": 43200,
+    "failureFactor": 5,
+    "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and passwordHistory(5)",
+    "accessTokenLifespan": 300,
+    "ssoSessionIdleTimeout": 1800,
+    "ssoSessionMaxLifespan": 36000,
+    "offlineSessionIdleTimeout": 2592000,
+    "roles": {
+        "realm": [
+            {
+                "name": "admin",
+                "description": "PCM Administrator — full access"
+            },
+            {
+                "name": "user",
+                "description": "Standard authenticated user"
+            },
+            {
+                "name": "crypto_admin",
+                "description": "Cryptographic administrator — KMS policy management only"
+            },
+            {
+                "name": "key_operator",
+                "description": "Key operator — key rotation and lifecycle management"
+            },
+            {
+                "name": "auditor",
+                "description": "Auditor — read-only access to audit logs and key metadata"
+            }
+        ]
+    },
+    "clients": [
+        {
+            "clientId": "pcm-gateway",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "${PCM_GATEWAY_CLIENT_SECRET}",
+            "directAccessGrantsEnabled": false,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "serviceAccountsEnabled": true,
+            "authorizationServicesEnabled": false,
+            "webOrigins": [
+                "${PCM_ALLOWED_ORIGIN}"
+            ],
+            "redirectUris": [
+                "${PCM_REDIRECT_URI}"
+            ],
+            "attributes": {
+                "access.token.lifespan": "300",
+                "use.refresh.tokens": "true",
+                "pkce.code.challenge.method": "S256"
+            }
+        }
+    ],
+    "requiredActions": [
+        {
+            "alias": "CONFIGURE_TOTP",
+            "name": "Configure OTP",
+            "providerId": "CONFIGURE_TOTP",
+            "enabled": true,
+            "defaultAction": false,
+            "priority": 10
+        },
+        {
+            "alias": "UPDATE_PASSWORD",
+            "name": "Update Password",
+            "providerId": "UPDATE_PASSWORD",
+            "enabled": true,
+            "defaultAction": false,
+            "priority": 30
+        }
+    ],
+    "browserSecurityHeaders": {
+        "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+        "xContentTypeOptions": "nosniff",
+        "xRobotsTag": "none",
+        "xFrameOptions": "SAMEORIGIN",
+        "contentSecurityPolicyReportOnly": "",
+        "xXSSProtection": "1; mode=block",
+        "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+    }
+}

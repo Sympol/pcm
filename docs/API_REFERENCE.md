@@ -147,6 +147,80 @@ curl -X DELETE http://localhost:8080/api/v1/profiles/550e8400-e29b-41d4-a716-446
 
 ---
 
+### Export Profile Data (GDPR Right to Data Portability)
+
+**`GET /api/v1/profiles/{id}/export`**
+
+Exports all personal data held by PCM for a given profile in a structured, machine-readable format (JSON). 
+
+The export includes data from all bounded contexts:
+- **Profile**: Handle, attributes, timestamps
+- **Consent**: All consent records with full event history
+- **Preference**: All preference settings
+- **Segment**: Segment memberships (if applicable)
+
+**Response:** `200 OK`
+```json
+{
+  "profileId": "550e8400-e29b-41d4-a716-446655440000",
+  "tenantId": "default",
+  "exportedAt": "2026-04-25T10:00:00Z",
+  "profile": {
+    "handle": "jdoe",
+    "attributes": {
+      "fullName": "John Doe",
+      "email": "john.doe@example.com",
+      "country": "FR"
+    },
+    "createdAt": "2026-04-25T10:00:00Z",
+    "updatedAt": "2026-04-25T10:00:00Z"
+  },
+  "consents": [
+    {
+      "consentId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "purpose": "MARKETING",
+      "scope": "EMAIL",
+      "status": "GRANTED",
+      "createdAt": "2026-04-25T10:00:00Z",
+      "updatedAt": "2026-04-25T10:00:00Z",
+      "events": [
+        {
+          "status": "GRANTED",
+          "timestamp": "2026-04-25T10:00:00Z"
+        }
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "preferenceId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "settings": {
+        "ui.theme": "dark",
+        "notifications.email": true
+      },
+      "createdAt": "2026-04-25T10:00:00Z",
+      "updatedAt": "2026-04-25T10:00:00Z"
+    }
+  ]
+}
+```
+
+```bash
+curl http://localhost:8080/api/v1/profiles/550e8400-e29b-41d4-a716-446655440000/export \
+  -H "X-Tenant-Id: default"
+```
+
+**Error codes:** 
+- `404 Not Found` if the profile does not exist
+- `410 Gone` if the profile has been erased
+
+**Compliance Notes:**
+- All PII is decrypted before export (user receives their data in clear text)
+- Export includes complete audit trail (consent events with timestamps)
+- Format is JSON (structured, commonly used, machine-readable)
+
+---
+
 ## 2. Consent API
 
 The consent context implements an **immutable ledger** — every grant and revoke is recorded as an append-only event with a cryptographic proof hash.

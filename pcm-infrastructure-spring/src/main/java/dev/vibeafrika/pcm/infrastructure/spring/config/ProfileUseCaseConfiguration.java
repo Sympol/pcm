@@ -1,5 +1,7 @@
 package dev.vibeafrika.pcm.infrastructure.spring.config;
 
+import dev.vibeafrika.pcm.consent.domain.repository.ConsentRepository;
+import dev.vibeafrika.pcm.preference.domain.repository.PreferenceRepository;
 import dev.vibeafrika.pcm.profile.application.port.EventPublisher;
 import dev.vibeafrika.pcm.profile.application.usecase.*;
 import dev.vibeafrika.pcm.profile.domain.repository.ProfileRepository;
@@ -36,5 +38,13 @@ public class ProfileUseCaseConfiguration {
             ProfileRepository profileRepository,
             EventPublisher eventPublisher) {
         return new EraseProfileUseCase(profileRepository, eventPublisher);
+    }
+
+    @Bean
+    public ExportProfileDataUseCase exportProfileDataUseCase(
+            ProfileRepository profileRepository,
+            ConsentRepository consentRepository,
+            PreferenceRepository preferenceRepository) {
+        return new ExportProfileDataUseCase(profileRepository, consentRepository, preferenceRepository);
     }
 }

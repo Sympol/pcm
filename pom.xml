@@ -470,13 +470,61 @@
                         <generateBackupPoms>false</generateBackupPoms>
                     </configuration>
                 </plugin>
+
+                <!-- OWASP Dependency-Check -->
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>9.0.9</version>
+                    <version>9.2.0</version>
                     <configuration>
+                        <!-- Fail build on CVSS score >= 7 (High/Critical) -->
                         <failBuildOnCVSS>7</failBuildOnCVSS>
                         <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                        <suppressionFile>${project.basedir}/.github/owasp-suppressions.xml</suppressionFile>
+                        <formats>
+                            <format>HTML</format>
+                            <format>JSON</format>
+                        </formats>
+                        <outputDirectory>${project.build.directory}</outputDirectory>
+                    </configuration>
+                </plugin>
+
+                <!-- SpotBugs + Find Security Bugs -->
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>4.8.6.2</version>
+                    <configuration>
+                        <effort>Max</effort>
+                        <threshold>Medium</threshold>
+                        <failOnError>true</failOnError>
+                        <plugins>
+                            <plugin>
+                                <groupId>com.h3xstream.findsecbugs</groupId>
+                                <artifactId>findsecbugs-plugin</artifactId>
+                                <version>1.13.0</version>
+                            </plugin>
+                        </plugins>
+                        <excludeFilterFile>${project.basedir}/.github/spotbugs-exclude.xml</excludeFilterFile>
+                    </configuration>
+                </plugin>
+
+                <!-- CycloneDX SBOM -->
+                <plugin>
+                    <groupId>org.cyclonedx</groupId>
+                    <artifactId>cyclonedx-maven-plugin</artifactId>
+                    <version>2.8.0</version>
+                    <configuration>
+                        <projectType>library</projectType>
+                        <schemaVersion>1.5</schemaVersion>
+                        <includeBomSerialNumber>true</includeBomSerialNumber>
+                        <includeCompileScope>true</includeCompileScope>
+                        <includeProvidedScope>true</includeProvidedScope>
+                        <includeRuntimeScope>true</includeRuntimeScope>
+                        <includeSystemScope>true</includeSystemScope>
+                        <includeTestScope>false</includeTestScope>
+                        <outputFormat>all</outputFormat>
+                        <outputName>bom</outputName>
                     </configuration>
                 </plugin>
 
@@ -526,6 +574,31 @@
                 <!-- <module>pcm-infrastructure-quarkus</module> -->
             </modules>
         </profile>
+
+        <!-- ─────────────────────────────────────────────────────────────────
+             Security profile — activated in CI for SAST  — Secure development process
+             ───────────────────────────────────────────────────────────────── -->
+        <profile>
+            <id>spotbugs</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>spotbugs-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
     </profiles>
 
 </project>

@@ -21,16 +21,19 @@ public class ProfileController {
     private final UpdateProfileUseCase updateProfileUseCase;
     private final GetProfileUseCase getProfileUseCase;
     private final EraseProfileUseCase eraseProfileUseCase;
+    private final ExportProfileDataUseCase exportProfileDataUseCase;
 
     public ProfileController(
             CreateProfileUseCase createProfileUseCase,
             UpdateProfileUseCase updateProfileUseCase,
             GetProfileUseCase getProfileUseCase,
-            EraseProfileUseCase eraseProfileUseCase) {
+            EraseProfileUseCase eraseProfileUseCase,
+            ExportProfileDataUseCase exportProfileDataUseCase) {
         this.createProfileUseCase = createProfileUseCase;
         this.updateProfileUseCase = updateProfileUseCase;
         this.getProfileUseCase = getProfileUseCase;
         this.eraseProfileUseCase = eraseProfileUseCase;
+        this.exportProfileDataUseCase = exportProfileDataUseCase;
     }
 
     @PostMapping
@@ -93,5 +96,21 @@ public class ProfileController {
         EraseProfileRequest request = new EraseProfileRequest(id, tenantId);
         eraseProfileUseCase.execute(request);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Export all personal data for a profile.
+     * Returns a comprehensive JSON export of all data across all bounded contexts.
+     */
+    @GetMapping("/{id}/export")
+    public ResponseEntity<ProfileDataExportResponse> exportProfileData(
+            @PathVariable UUID id,
+            @RequestHeader("X-Tenant-Id") String tenantId) {
+        
+        ProfileDataExportResponse response = exportProfileDataUseCase.execute(
+            id.toString(), 
+            tenantId
+        );
+        return ResponseEntity.ok(response);
     }
 }

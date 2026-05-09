@@ -1,65 +1,77 @@
 # PCM Quick Start Guide
 
-This guide will help you get **PCM (Profile & Consent Manager)** running on your local machine for development and testing.
+This guide will help you get **PCM (Profile & Consent Manager)** running locally — either fully via Docker or in hybrid mode (infrastructure in Docker, app on the JVM).
 
 ## Prerequisites
 
-- **Java 21** (required for virtual threads and modern syntax)
-- **Maven 3.9+**
-- **Docker & Docker Compose**
+- **Docker & Docker Compose v2** (required)
+- **Java 21 + Maven 3.9+** (only for hybrid / development mode)
 - **curl or Postman** (for testing APIs)
 
 ---
 
-## 1. Start Infrastructure
+## Option A — Full Docker (recommended)
 
-PCM relies on PostgreSQL, Redis, Kafka, and optionally Vault. A pre-configured `docker-compose.yml` starts everything:
+Everything runs in containers: the PCM application, PostgreSQL, Vault, Keycloak, and the observability stack.
 
-```bash
-# From the project root
-docker-compose up -d
-```
-
-This starts:
-- **PostgreSQL** — primary database (port 5432)
-- **Redis** — caching (port 6379)
-- **Kafka** — messaging (port 9092)
-- **HashiCorp Vault** — secrets & key management (port 8200)
-- **OpenTelemetry Collector** — observability (port 4318)
-- **Jaeger** — distributed tracing UI at `http://localhost:16686`
-- **Prometheus** — metrics at `http://localhost:9090`
-- **Grafana** — dashboards at `http://localhost:3000`
-
----
-
-## 2. Build the Platform
+### 1. Configure secrets
 
 ```bash
-mvn clean install -DskipTests
+cp .env.example .env
+# Edit .env and replace every CHANGE_ME value
 ```
 
-This builds all modules: the four bounded contexts (`preference`, `profile`, `consent`, `segment`) and the unified Spring Boot application (`pcm-infrastructure-spring`).
-
----
-
-## 3. Run the Application
-
-PCM is a **single deployable artifact** — one Spring Boot application serving all bounded contexts:
+### 2. Build & start
 
 ```bash
-mvn spring-boot:run -pl pcm-infrastructure-spring
+docker compose up --build -d
 ```
 
-The application starts on **port 8080** by default.
+The first build compiles the full Maven project inside Docker (~3-5 min). Subsequent builds are fast thanks to layer caching.
 
-Health check:
+### 3. Check health
+
 ```bash
 curl http://localhost:8080/actuator/health
+# → {"status":"UP"}
+```
+
+### 4. Optional dev tools (pgAdmin)
+
+```bash
+docker compose --profile tools up -d pgadmin
+# pgAdmin → http://localhost:5050
 ```
 
 ---
 
-## 4. Your First API Calls
+## Option B — Hybrid (infrastructure in Docker, app on JVM)
+
+Faster iteration cycle: only the backing services run in Docker.
+
+### 1. Start infrastructure only
+
+```bash
+docker compose up -d postgresql vault keycloak prometheus grafana jaeger otel-collector
+```
+
+### 2. Build the application
+
+```bash
+./mvnw clean install -DskipTests
+```
+
+### 3. Run the application
+
+```bash
+./mvnw spring-boot:run -pl pcm-infrastructure-spring
+```
+
+The application starts on **port 8080**.
+
+---
+
+## Your First API Calls
 
 ### Create a Profile
 
@@ -68,7 +80,6 @@ curl -X POST http://localhost:8080/api/v1/profiles \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -d '{
-    "id": "550e8400-e29b-41d4-a716-446655440000",
     "handle": "koffi_jean",
     "attributes": {
       "displayName": "Koffi Jean Christ",
@@ -84,68 +95,67 @@ curl -X POST http://localhost:8080/api/v1/consents \
   -H "Content-Type: application/json" \
   -H "X-Tenant-Id: default" \
   -d '{
-    "profileId": "550e8400-e29b-41d4-a716-446655440000",
+    "profileId": "<profile-id-from-above>",
     "tenantId": "default",
     "purpose": "MARKETING",
     "scope": "EMAIL"
   }'
 ```
 
-### Verify Consent
+### Export Personal Data (GDPR Art. 20)
 
 ```bash
-curl "http://localhost:8080/api/v1/consents/verify?consentId=<consent-id>" \
+curl http://localhost:8080/api/v1/profiles/<profile-id>/export \
   -H "X-Tenant-Id: default"
 ```
 
 ---
 
-## 5. Useful Endpoints
+## Service URLs
 
-| Endpoint | Description |
-|----------|-------------|
-| `http://localhost:8080/api/v1/profiles` | Profile API |
-| `http://localhost:8080/api/v1/consents` | Consent API |
-| `http://localhost:8080/api/v1/preferences` | Preference API |
-| `http://localhost:8080/api/v1/segments` | Segment API |
-| `http://localhost:8080/actuator/health` | Health check |
-| `http://localhost:8080/actuator/metrics` | Prometheus metrics |
-| `http://localhost:16686` | Jaeger tracing UI |
-| `http://localhost:3000` | Grafana dashboards |
+| Service | URL | Description |
+|---------|-----|-------------|
+| PCM API | http://localhost:8080 | All REST endpoints |
+| Actuator health | http://localhost:8080/actuator/health | Health check |
+| Prometheus metrics | http://localhost:8080/actuator/prometheus | Raw metrics |
+| Keycloak | http://localhost:8090/auth | IAM console |
+| Vault | http://localhost:8200 | Secrets UI |
+| Prometheus | http://localhost:9090 | Metrics query |
+| Grafana | http://localhost:3000 | Dashboards |
+| Jaeger | http://localhost:16686 | Distributed traces |
+| pgAdmin | http://localhost:5050 | DB admin (tools profile) |
 
 ---
 
-## 6. Running Tests
+## Running Tests
 
 ```bash
-# All tests
-mvn test
-
 # Domain tests only (no Spring context, fast)
-mvn test -pl consent-context/consent-domain
-mvn test -pl profile-context/profile-domain
+./mvnw test -pl consent-context/consent-domain
+./mvnw test -pl profile-context/profile-domain
 
-# Full integration tests
-mvn test -pl pcm-infrastructure-spring
+# Full integration tests (requires Docker for Testcontainers)
+./mvnw test -pl pcm-infrastructure-spring
 ```
 
 ---
 
-## 7. Configuration
+## Useful Docker Commands
 
-PCM uses environment variables for all configuration. Key variables:
+```bash
+# View PCM application logs
+docker compose logs -f pcm
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SERVER_PORT` | HTTP port | `8080` |
-| `SPRING_DATASOURCE_URL` | Database URL | `jdbc:postgresql://localhost:5432/pcm_db` |
-| `SPRING_DATASOURCE_USERNAME` | DB username | `pcm` |
-| `SPRING_DATASOURCE_PASSWORD` | DB password | `pcm_dev_password` |
-| `PCM_ENCRYPTION_PROVIDER` | KMS provider (`vault`, `aws`, `azure`, `gcp`, `local`) | `local` |
-| `VAULT_URI` | Vault address | `http://localhost:8200` |
+# Restart only the app (after a code change + rebuild)
+docker compose up --build -d pcm
 
-See [Infrastructure Portability](PORTABILITY.md) for the full configuration reference.
+# Stop everything and remove volumes (clean slate)
+docker compose down -v
+
+# Scale down to just the essentials
+docker compose stop grafana jaeger otel-collector prometheus
+```
 
 ---
 
-> **Note**: In development mode, security is relaxed for some endpoints. In production, all requests require a valid JWT issued by Keycloak.
+> In development mode, security is relaxed for some endpoints. In production, all requests require a valid JWT issued by Keycloak. See `application-prod.yml` for the production profile.

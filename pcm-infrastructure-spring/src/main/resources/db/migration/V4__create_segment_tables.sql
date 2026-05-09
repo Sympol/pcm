@@ -15,9 +15,11 @@ CREATE TABLE segment_segments (
 );
 
 -- Create segment_tags table (stores tags for each segment)
+-- Uses composite PK (segment_id, tag) to match Hibernate's @ElementCollection Set mapping
 CREATE TABLE segment_tags (
     segment_id UUID NOT NULL,
     tag VARCHAR(100) NOT NULL,
+    PRIMARY KEY (segment_id, tag),
     CONSTRAINT fk_segment_tags_segment 
         FOREIGN KEY (segment_id) 
         REFERENCES segment_segments(id) 

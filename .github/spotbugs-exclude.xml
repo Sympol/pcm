@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusion filter.
+  Add false-positive patterns here with justification.
+  — Each exclusion must be reviewed at each major release.
+-->
+<FindBugsFilter
+    xmlns="https://github.com/spotbugs/filter/3.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0
+                        https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
+
+    <!-- Exclude test classes from security checks (not production code) -->
+    <Match>
+        <Class name="~.*Test.*"/>
+        <Bug category="SECURITY"/>
+    </Match>
+
+    <!-- Exclude generated protobuf classes -->
+    <Match>
+        <Package name="~.*\.grpc\..*"/>
+    </Match>
+
+</FindBugsFilter>

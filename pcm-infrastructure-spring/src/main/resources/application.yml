@@ -4,9 +4,9 @@ spring:
   
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/pcm
-    username: pcm_user
-    password: ${DB_PASSWORD:pcm_password}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pcm}
+    username: ${SPRING_DATASOURCE_USERNAME:pcm_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:pcm_password}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20

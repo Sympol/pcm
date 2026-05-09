@@ -1,0 +1,136 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PCM — Production Spring Profile
+# Activate with: --spring.profiles.active=prod
+# All sensitive values MUST be injected via environment variables or Vault.
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:pcm}?sslmode=require
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  # Disable SQL logging in production — prevents PII leakage in logs
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+
+  # Keycloak / OAuth2 Resource Server
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+
+# ── TLS Configuration ─────────────────────────────────────────────────────────
+#  Enforce TLS 1.3 on all endpoints
+server:
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: ${TLS_KEYSTORE_PATH}
+    key-store-password: ${TLS_KEYSTORE_PASSWORD}
+    key-store-type: PKCS12
+    key-alias: pcm
+    trust-store: ${TLS_TRUSTSTORE_PATH}
+    trust-store-password: ${TLS_TRUSTSTORE_PASSWORD}
+    protocol: TLS
+    enabled-protocols: TLSv1.3
+    ciphers:
+      - TLS_AES_256_GCM_SHA384
+      - TLS_CHACHA20_POLY1305_SHA256
+      - TLS_AES_128_GCM_SHA256
+  # HTTP Strict Transport Security
+  http2:
+    enabled: true
+
+# ── Actuator — restrict exposure in production ────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only expose health and prometheus — never expose env, beans, mappings in prod
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+  server:
+    port: 9090
+    ssl:
+      enabled: false  # Prometheus scraping on internal port without TLS
+
+# ── Logging — production settings ─────────────────────────────────────────────
+#  Reduce log verbosity; no SQL, no debug
+logging:
+  level:
+    root: WARN
+    dev.vibeafrika.pcm: INFO
+    org.springframework.web: WARN
+    org.springframework.transaction: WARN
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+  pattern:
+    # Structured JSON logging for SIEM integration
+    console: '{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%level","logger":"%logger{36}","thread":"%thread","message":"%message"}%n'
+
+# ── PCM Encryption — production overrides ─────────────────────────────────────
+pcm:
+  encryption:
+    environment: PROD
+    blind-index-global-salt: ${BLIND_INDEX_GLOBAL_SALT}
+
+    kms:
+      provider: ${KMS_PROVIDER}
+      endpoint: ${KMS_ENDPOINT}
+      region: ${KMS_REGION:eu-west-1}
+      # FIPS 140-2 Level 3 required in production
+      certification: FIPS_140_2_L3
+      health-check-interval: PT30S
+
+      mtls:
+        enabled: true
+        keystore-path: ${KMS_KEYSTORE_PATH}
+        keystore-password: ${KMS_KEYSTORE_PASSWORD}
+        truststore-path: ${KMS_TRUSTSTORE_PATH}
+        truststore-password: ${KMS_TRUSTSTORE_PASSWORD}
+
+      failover:
+        enabled: ${KMS_FAILOVER_ENABLED:false}
+        provider: ${KMS_FAILOVER_PROVIDER:}
+        endpoint: ${KMS_FAILOVER_ENDPOINT:}
+        region: ${KMS_FAILOVER_REGION:}
+
+    dek-cache:
+      max-size: 1000
+      ttl-minutes: 60
+      secure-memory: true
+
+    key-rotation:
+      dek-rotation-days: 90
+      kek-rotation-days: 365
+      emergency-rotation-time-minutes: 15
+
+    audit:
+      level: HIGH
+      retention-days: 2555  # 7 years
+      encrypt-logs: true
+      sign-logs: true
+      sampling-rate: 1
+
+    network:
+      mtls-enabled: true
+      private-subnet-only: true
+      allowed-service-ips: ${KMS_ALLOWED_SERVICE_IPS:}
+      circuit-breaker:
+        failure-threshold: 5
+        recovery-time-seconds: 60
+        half-open-max-calls: 3
