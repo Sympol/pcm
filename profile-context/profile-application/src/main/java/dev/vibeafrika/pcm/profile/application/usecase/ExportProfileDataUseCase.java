@@ -1,8 +1,6 @@
 package dev.vibeafrika.pcm.profile.application.usecase;
 
-import dev.vibeafrika.pcm.consent.domain.model.ProfileId as ConsentProfileId;
 import dev.vibeafrika.pcm.consent.domain.repository.ConsentRepository;
-import dev.vibeafrika.pcm.preference.domain.model.ProfileId as PreferenceProfileId;
 import dev.vibeafrika.pcm.preference.domain.repository.PreferenceRepository;
 import dev.vibeafrika.pcm.profile.application.dto.ProfileDataExportResponse;
 import dev.vibeafrika.pcm.profile.domain.exception.ProfileNotFoundException;
@@ -12,7 +10,6 @@ import dev.vibeafrika.pcm.profile.domain.model.TenantId;
 import dev.vibeafrika.pcm.profile.domain.repository.ProfileRepository;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -54,7 +51,7 @@ public class ExportProfileDataUseCase {
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
 
         // 2. Fetch all consents for this profile
-        var consents = consentRepository.findByProfile(ConsentProfileId.of(profileId.getValue()))
+        var consents = consentRepository.findByProfile(dev.vibeafrika.pcm.consent.domain.model.ProfileId.of(profileId.getValue()))
                 .stream()
                 .map(consent -> new ProfileDataExportResponse.ConsentExportEntry(
                         consent.getId().getValue(),
@@ -63,7 +60,7 @@ public class ExportProfileDataUseCase {
                         consent.getStatus().name(),
                         consent.getCreatedAt().toString(),
                         consent.getUpdatedAt().toString(),
-                        consent.getEvents().stream()
+                        consent.getHistory().stream()
                                 .map(event -> new ProfileDataExportResponse.ConsentEventEntry(
                                         event.getStatus().name(),
                                         event.getTimestamp().toString()
@@ -74,13 +71,13 @@ public class ExportProfileDataUseCase {
 
         // 3. Fetch preferences for this profile
         var preferences = preferenceRepository.findByProfileIdAndTenant(
-                        PreferenceProfileId.of(profileId.getValue()),
+                        dev.vibeafrika.pcm.preference.domain.model.ProfileId.of(profileId.getValue()),
                         dev.vibeafrika.pcm.preference.domain.model.TenantId.of(tenantIdStr))
                 .map(pref -> new ProfileDataExportResponse.PreferenceExportEntry(
                         pref.getId().getValue(),
                         pref.getSettings(),
-                        pref.getCreatedAt().toString(),
-                        pref.getUpdatedAt().toString()
+                        pref.getLastUpdated().toString(),
+                        pref.getLastUpdated().toString()
                 ))
                 .stream()
                 .toList();

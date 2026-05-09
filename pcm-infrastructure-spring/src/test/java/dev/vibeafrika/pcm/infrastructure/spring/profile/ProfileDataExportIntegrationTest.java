@@ -125,8 +125,8 @@ class ProfileDataExportIntegrationTest {
         assertThat(exportResponse.consents()).isNotEmpty();
         assertThat(exportResponse.consents().get(0).purpose()).isEqualTo("MARKETING");
         assertThat(exportResponse.consents().get(0).scope()).isEqualTo("EMAIL");
-        assertThat(exportResponse.consents().get(0).status()).isEqualTo("GRANTED");
-        assertThat(exportResponse.consents().get(0).events()).isNotEmpty();
+        assertThat(exportResponse.consents().get(0).currentStatus()).isEqualTo("GRANTED");
+        assertThat(exportResponse.consents().get(0).history()).isNotEmpty();
 
         // Verify preferences section
         assertThat(exportResponse.preferences()).isNotEmpty();
@@ -235,8 +235,8 @@ class ProfileDataExportIntegrationTest {
                 .orElseThrow();
 
         // Verify it has both GRANTED and REVOKED events
-        assertThat(analyticsConsent.events()).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(analyticsConsent.events().stream()
+        assertThat(analyticsConsent.history()).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(analyticsConsent.history().stream()
                 .map(ProfileDataExportResponse.ConsentEventEntry::status))
                 .contains("GRANTED", "REVOKED");
     }
