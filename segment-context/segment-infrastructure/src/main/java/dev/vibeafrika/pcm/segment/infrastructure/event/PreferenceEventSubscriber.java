@@ -3,7 +3,6 @@ package dev.vibeafrika.pcm.segment.infrastructure.event;
 import dev.vibeafrika.pcm.preference.domain.event.PreferenceCreatedEvent;
 import dev.vibeafrika.pcm.preference.domain.event.PreferenceUpdatedEvent;
 import dev.vibeafrika.pcm.segment.application.usecase.EvaluateSegmentForPreferenceUseCase;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 

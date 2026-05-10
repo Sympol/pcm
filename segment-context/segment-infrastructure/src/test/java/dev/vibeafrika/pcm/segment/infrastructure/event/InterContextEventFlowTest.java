@@ -4,17 +4,20 @@ import dev.vibeafrika.pcm.preference.domain.event.PreferenceCreatedEvent;
 import dev.vibeafrika.pcm.preference.domain.model.PreferenceId;
 import dev.vibeafrika.pcm.preference.domain.model.ProfileId;
 import dev.vibeafrika.pcm.preference.domain.model.TenantId;
+import dev.vibeafrika.pcm.segment.application.port.EventPublisher;
+import dev.vibeafrika.pcm.segment.application.port.PreferenceProvider;
+import dev.vibeafrika.pcm.segment.application.port.ProfileProvider;
 import dev.vibeafrika.pcm.segment.application.usecase.EvaluateSegmentForPreferenceUseCase;
 import dev.vibeafrika.pcm.segment.domain.repository.SegmentRepository;
+import dev.vibeafrika.pcm.segment.domain.service.SegmentEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -22,10 +25,6 @@ import static org.mockito.Mockito.*;
 
 /**
  * Integration test for inter-context event flow between Preference and Segment contexts.
- * Tests that:
- * 1. Events are delivered to subscribers
- * 2. Events are delivered within the same transaction
- * 3. Rollback prevents event delivery (tested via @TransactionalEventListener behavior)
  */
 @ExtendWith(MockitoExtension.class)
 class InterContextEventFlowTest {
@@ -34,14 +33,24 @@ class InterContextEventFlowTest {
     private SegmentRepository segmentRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private ProfileProvider profileProvider;
+
+    @Mock
+    private PreferenceProvider preferenceProvider;
+
+    @Mock
+    private EventPublisher segmentEventPublisher;
+
+    @Mock
+    private SegmentEvaluationService evaluationService;
 
     private EvaluateSegmentForPreferenceUseCase evaluateSegmentUseCase;
     private PreferenceEventSubscriber eventSubscriber;
 
     @BeforeEach
     void setUp() {
-        evaluateSegmentUseCase = new EvaluateSegmentForPreferenceUseCase(segmentRepository);
+        evaluateSegmentUseCase = new EvaluateSegmentForPreferenceUseCase(
+                segmentRepository, profileProvider, preferenceProvider, segmentEventPublisher, evaluationService);
         eventSubscriber = new PreferenceEventSubscriber(evaluateSegmentUseCase);
     }
 
@@ -58,16 +67,20 @@ class InterContextEventFlowTest {
             profileId
         );
 
-        // Mock repository to return empty list (no matching segments)
-        when(segmentRepository.findMatchingSegments(any(), any()))
+        // Mock repository to return empty list
+        when(segmentRepository.findByProfile(any(), any()))
             .thenReturn(Collections.emptyList());
+        
+        // Mock profile provider
+        when(profileProvider.getProfileSnapshot(any()))
+            .thenReturn(Optional.of(new ProfileProvider.ProfileSnapshot(profileId.getValue(), "handle", Collections.emptyMap())));
 
         // When: Event is published and handled
         eventSubscriber.onPreferenceCreated(event);
 
         // Then: Segment evaluation should be triggered
         verify(segmentRepository, times(1))
-            .findMatchingSegments(any(), any());
+            .findByProfile(any(), any());
     }
 
     @Test
@@ -85,15 +98,19 @@ class InterContextEventFlowTest {
             );
 
         // Mock repository to return empty list
-        when(segmentRepository.findMatchingSegments(any(), any()))
+        when(segmentRepository.findByProfile(any(), any()))
             .thenReturn(Collections.emptyList());
+
+        // Mock profile provider
+        when(profileProvider.getProfileSnapshot(any()))
+            .thenReturn(Optional.of(new ProfileProvider.ProfileSnapshot(profileId.getValue(), "handle", Collections.emptyMap())));
 
         // When: Event is published and handled
         eventSubscriber.onPreferenceUpdated(event);
 
         // Then: Segment evaluation should be triggered
         verify(segmentRepository, times(1))
-            .findMatchingSegments(any(), any());
+            .findByProfile(any(), any());
     }
 
     @Test
@@ -113,27 +130,20 @@ class InterContextEventFlowTest {
         );
 
         // Mock repository
-        when(segmentRepository.findMatchingSegments(any(), any()))
+        when(segmentRepository.findByProfile(any(), any()))
             .thenReturn(Collections.emptyList());
+
+        // Mock profile provider
+        when(profileProvider.getProfileSnapshot(any()))
+            .thenReturn(Optional.of(new ProfileProvider.ProfileSnapshot(profileUuid, "handle", Collections.emptyMap())));
 
         // When: Event is handled
         eventSubscriber.onPreferenceCreated(event);
 
         // Then: Repository should be called with correct domain value objects
-        verify(segmentRepository).findMatchingSegments(
+        verify(segmentRepository).findByProfile(
             argThat(pid -> pid.getValue().equals(profileUuid)),
             argThat(tid -> tid.getValue().equals(tenantValue))
         );
     }
-
-    /**
-     * Note: Testing transactional behavior requires a full Spring context with
-     * transaction management. The @TransactionalEventListener annotation ensures:
-     * 
-     * 1. Events are delivered AFTER the transaction commits successfully
-     * 2. If the transaction rolls back, the event handler is NOT invoked
-     * 
-     * This test verifies the event handler logic. Full transactional behavior
-     * should be tested in a Spring Boot integration test with @SpringBootTest.
-     */
 }

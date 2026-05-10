@@ -1,16 +1,25 @@
 package dev.vibeafrika.pcm.infrastructure.spring.config;
 
+import dev.vibeafrika.pcm.segment.application.port.EventPublisher;
+import dev.vibeafrika.pcm.segment.application.port.PreferenceProvider;
+import dev.vibeafrika.pcm.segment.application.port.ProfileProvider;
 import dev.vibeafrika.pcm.segment.application.usecase.*;
 import dev.vibeafrika.pcm.segment.domain.repository.SegmentRepository;
+import dev.vibeafrika.pcm.segment.domain.service.SegmentEvaluationService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * Spring configuration for Segment context use cases.
- * Wires use cases with their dependencies using constructor injection.
  */
 @Configuration
 public class SegmentUseCaseConfiguration {
+
+    @Bean
+    public SegmentEvaluationService segmentEvaluationService() {
+        return new SegmentEvaluationService();
+    }
 
     @Bean
     public CreateSegmentUseCase createSegmentUseCase(SegmentRepository segmentRepository) {
@@ -39,13 +48,21 @@ public class SegmentUseCaseConfiguration {
 
     @Bean
     public EvaluateSegmentForPreferenceUseCase evaluateSegmentForPreferenceUseCase(
-            SegmentRepository segmentRepository) {
-        return new EvaluateSegmentForPreferenceUseCase(segmentRepository);
+            SegmentRepository segmentRepository,
+            ProfileProvider profileProvider,
+            PreferenceProvider preferenceProvider,
+            @Qualifier("segmentSpringEventPublisher") EventPublisher eventPublisher,
+            SegmentEvaluationService evaluationService) {
+        return new EvaluateSegmentForPreferenceUseCase(segmentRepository, profileProvider, preferenceProvider, eventPublisher, evaluationService);
     }
 
     @Bean
     public EvaluateSegmentForProfileUseCase evaluateSegmentForProfileUseCase(
-            SegmentRepository segmentRepository) {
-        return new EvaluateSegmentForProfileUseCase(segmentRepository);
+            SegmentRepository segmentRepository,
+            ProfileProvider profileProvider,
+            PreferenceProvider preferenceProvider,
+            @Qualifier("segmentSpringEventPublisher") EventPublisher eventPublisher,
+            SegmentEvaluationService evaluationService) {
+        return new EvaluateSegmentForProfileUseCase(segmentRepository, profileProvider, preferenceProvider, eventPublisher, evaluationService);
     }
 }
