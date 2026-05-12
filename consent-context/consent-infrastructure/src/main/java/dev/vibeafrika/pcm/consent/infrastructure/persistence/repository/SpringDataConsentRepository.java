@@ -1,6 +1,5 @@
 package dev.vibeafrika.pcm.consent.infrastructure.persistence.repository;
 
-import dev.vibeafrika.pcm.consent.domain.model.ConsentStatus;
 import dev.vibeafrika.pcm.consent.infrastructure.persistence.entity.ConsentJpaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

@@ -1,7 +1,6 @@
 package dev.vibeafrika.pcm.infrastructure.encryption;
 
 import dev.vibeafrika.pcm.domain.encryption.IV;
-import dev.vibeafrika.pcm.domain.encryption.IVCounter;
 import dev.vibeafrika.pcm.domain.encryption.IVCounterError;
 import dev.vibeafrika.pcm.domain.encryption.IVCounterState;
 import dev.vibeafrika.pcm.domain.encryption.IVCounterStorage;

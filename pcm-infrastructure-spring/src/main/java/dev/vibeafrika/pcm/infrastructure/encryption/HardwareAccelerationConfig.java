@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * Detects and reports AES-NI hardware acceleration availability.

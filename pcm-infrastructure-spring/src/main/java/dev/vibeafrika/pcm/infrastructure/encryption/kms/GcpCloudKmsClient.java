@@ -5,7 +5,6 @@ import com.google.cloud.kms.v1.CreateKeyRingRequest;
 import com.google.cloud.kms.v1.CryptoKey;
 import com.google.cloud.kms.v1.CryptoKeyVersion;
 import com.google.cloud.kms.v1.CryptoKeyVersionTemplate;
-import com.google.cloud.kms.v1.CryptoKeyName;
 import com.google.cloud.kms.v1.DecryptRequest;
 import com.google.cloud.kms.v1.DecryptResponse;
 import com.google.cloud.kms.v1.DestroyCryptoKeyVersionRequest;

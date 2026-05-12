@@ -3,14 +3,10 @@ package dev.vibeafrika.pcm.infrastructure.spring.web.consent;
 import dev.vibeafrika.pcm.consent.application.dto.*;
 import dev.vibeafrika.pcm.consent.application.usecase.*;
 import dev.vibeafrika.pcm.consent.domain.model.ConsentId;
-import dev.vibeafrika.pcm.consent.domain.model.ProfileId;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/consents")

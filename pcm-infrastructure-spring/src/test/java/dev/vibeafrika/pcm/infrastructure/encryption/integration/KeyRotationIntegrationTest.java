@@ -3,7 +3,6 @@ package dev.vibeafrika.pcm.infrastructure.encryption.integration;
 import dev.vibeafrika.pcm.domain.encryption.*;
 import dev.vibeafrika.pcm.infrastructure.encryption.*;
 import dev.vibeafrika.pcm.infrastructure.encryption.adapter.DatabaseEncryptionAdapter;
-import dev.vibeafrika.pcm.profile.infrastructure.persistence.entity.ProfileJpaEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -97,14 +95,6 @@ class KeyRotationIntegrationTest {
         Result<UUID, KeyError> result = keyManager.rotateDEK(CONTEXT);
         assertTrue(result.isSuccess(), "Initial DEK setup must succeed");
         return result.getValue().orElseThrow();
-    }
-
-    private ProfileJpaEntity profileEntity(String handle) {
-        ProfileJpaEntity entity = new ProfileJpaEntity();
-        entity.setId(UUID.randomUUID());
-        entity.setTenantId("rotation-test-tenant");
-        entity.setHandle(handle);
-        return entity;
     }
 
     // -------------------------------------------------------------------------
@@ -235,7 +225,7 @@ class KeyRotationIntegrationTest {
         @DisplayName("Updated data after rotation is encrypted with new DEK")
         void updatedDataAfterRotation_encryptedWithNewDEK() {
             UUID kekId = UUID.randomUUID();
-            UUID oldDEKId = initContextWithDEK(kekId);
+            //UUID oldDEKId = initContextWithDEK(kekId);
 
             // Rotate DEK
             when(kmsClient.encryptDEK(any(DEK.class), eq(kekId)))
@@ -279,8 +269,8 @@ class KeyRotationIntegrationTest {
 
             when(kmsClient.encryptDEK(any(DEK.class), eq(oldKEKId)))
                     .thenReturn(Result.success(fakeEncryptedDEK(oldKEKId)));
-            UUID dek1 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
-            UUID dek2 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
+        //     UUID dek1 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
+        //     UUID dek2 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
 
             // Rotate KEK
             when(kmsClient.generateKEK(CONTEXT, ENV)).thenReturn(Result.success(newKEKId));

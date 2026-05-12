@@ -215,7 +215,7 @@ class ConsentPerformanceTest {
 
         // Warm up
         for (int i = 0; i < WARMUP_REQUESTS; i++) {
-            long start = System.nanoTime();
+            //long start = System.nanoTime();
             given()
                 .header("X-Tenant-Id", TENANT_ID)
             .when()

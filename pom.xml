@@ -475,7 +475,7 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>9.2.0</version>
+                    <version>12.1.0</version>
                     <configuration>
                         <!-- Fail build on CVSS score >= 7 (High/Critical) -->
                         <failBuildOnCVSS>7</failBuildOnCVSS>
@@ -485,7 +485,8 @@
                             <format>HTML</format>
                             <format>JSON</format>
                         </formats>
-                        <outputDirectory>${project.build.directory}</outputDirectory>
+                        <!-- Dedicated subdirectory so the upload glob is unambiguous -->
+                        <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
                     </configuration>
                 </plugin>
 

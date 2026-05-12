@@ -1,6 +1,5 @@
 package dev.vibeafrika.pcm.infrastructure.encryption;
 
-import dev.vibeafrika.pcm.domain.encryption.DEK;
 import dev.vibeafrika.pcm.domain.encryption.DEKWithMetadata;
 
 import java.time.Duration;

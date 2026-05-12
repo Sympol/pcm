@@ -1,7 +1,6 @@
 package dev.vibeafrika.pcm.infrastructure.spring;
 
 import net.jqwik.api.*;
-import org.junit.jupiter.api.DisplayName;
 
 import java.util.List;
 

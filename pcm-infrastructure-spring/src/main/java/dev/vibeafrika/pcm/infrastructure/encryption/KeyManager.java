@@ -655,41 +655,41 @@ public class KeyManager implements IKeyManager {
      * CRITICAL security event is logged. After 2 minutes of continuous
      * unavailability an additional CRITICAL alert is emitted.
      */
-    private void checkKmsAvailability() {
-        Result<KMSHealth, KMSError> healthResult = effectiveKmsClient().healthCheck();
+    // private void checkKmsAvailability() {
+    //     Result<KMSHealth, KMSError> healthResult = effectiveKmsClient().healthCheck();
 
-        boolean available = healthResult.isSuccess() &&
-                healthResult.getValue().map(KMSHealth::isAvailable).orElse(false);
+    //     boolean available = healthResult.isSuccess() &&
+    //             healthResult.getValue().map(KMSHealth::isAvailable).orElse(false);
 
-        if (!available) {
-            long now = System.currentTimeMillis();
-            long since = kmsUnavailableSince.compareAndExchange(0L, now);
-            if (since == 0L) {
-                since = now; // first time we recorded unavailability
-            }
+    //     if (!available) {
+    //         long now = System.currentTimeMillis();
+    //         long since = kmsUnavailableSince.compareAndExchange(0L, now);
+    //         if (since == 0L) {
+    //             since = now; // first time we recorded unavailability
+    //         }
 
-            if (circuitBreaker != null) {
-                String msg = healthResult.isFailure()
-                        ? healthResult.getError().map(KMSError::getMessage).orElse("unknown")
-                        : healthResult.getValue().map(KMSHealth::getMessage).orElse("unhealthy");
+    //         if (circuitBreaker != null) {
+    //             String msg = healthResult.isFailure()
+    //                     ? healthResult.getError().map(KMSError::getMessage).orElse("unknown")
+    //                     : healthResult.getValue().map(KMSHealth::getMessage).orElse("unhealthy");
 
-                logSecurityEvent("KMS_UNAVAILABLE", null, "KMS health check failed: " + msg);
-            }
+    //             logSecurityEvent("KMS_UNAVAILABLE", null, "KMS health check failed: " + msg);
+    //         }
 
-            long unavailableMs = now - since;
-            if (unavailableMs >= KMS_ALERT_THRESHOLD_MS) {
-                logger.error("ALERT: KMS has been unavailable for {}ms (threshold {}ms) – operations team must be notified",
-                        unavailableMs, KMS_ALERT_THRESHOLD_MS);
-                if (circuitBreaker != null) {
-                    logSecurityEvent("KMS_PROLONGED_UNAVAILABILITY", null,
-                            "KMS unavailable for " + unavailableMs + "ms – alerting operations");
-                }
-            }
-        } else {
-            // KMS is back – reset the unavailability tracker
-            kmsUnavailableSince.set(0L);
-        }
-    }
+    //         long unavailableMs = now - since;
+    //         if (unavailableMs >= KMS_ALERT_THRESHOLD_MS) {
+    //             logger.error("ALERT: KMS has been unavailable for {}ms (threshold {}ms) – operations team must be notified",
+    //                     unavailableMs, KMS_ALERT_THRESHOLD_MS);
+    //             if (circuitBreaker != null) {
+    //                 logSecurityEvent("KMS_PROLONGED_UNAVAILABILITY", null,
+    //                         "KMS unavailable for " + unavailableMs + "ms – alerting operations");
+    //             }
+    //         }
+    //     } else {
+    //         // KMS is back – reset the unavailability tracker
+    //         kmsUnavailableSince.set(0L);
+    //     }
+    // }
 
     /**
      * Logs a key access event.

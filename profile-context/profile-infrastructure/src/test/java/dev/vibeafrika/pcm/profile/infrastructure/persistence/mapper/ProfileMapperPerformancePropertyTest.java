@@ -8,7 +8,6 @@ import dev.vibeafrika.pcm.profile.infrastructure.persistence.entity.ProfileJpaEn
 import net.jqwik.api.*;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;

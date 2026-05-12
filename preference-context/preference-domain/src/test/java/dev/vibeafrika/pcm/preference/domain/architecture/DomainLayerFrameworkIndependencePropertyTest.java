@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**

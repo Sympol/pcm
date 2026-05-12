@@ -13,7 +13,6 @@ import net.jqwik.api.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
