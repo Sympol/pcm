@@ -5,7 +5,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-jammy AS builder
+
+# Prevent OOM during Maven build and container layer corruption
+ENV MAVEN_OPTS="-Xmx1024m -XX:MaxMetaspaceSize=256m"
 
 WORKDIR /build
 
@@ -39,7 +42,9 @@ COPY segment-context/segment-application/pom.xml                segment-context/
 COPY segment-context/segment-infrastructure/pom.xml             segment-context/segment-infrastructure/pom.xml
 
 # Download dependencies (cached layer — only re-runs when POMs change)
-RUN ./mvnw dependency:go-offline -q -pl pcm-infrastructure-spring -am
+# Add retry mechanism to be robust against transient Maven Central network drops
+RUN ./mvnw dependency:go-offline -B -q --no-transfer-progress -pl pcm-infrastructure-spring -am || \
+    ./mvnw dependency:go-offline -B -q --no-transfer-progress -pl pcm-infrastructure-spring -am
 
 # Copy all source code
 COPY libs/common/src                                            libs/common/src
