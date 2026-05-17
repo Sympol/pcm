@@ -42,7 +42,7 @@ public class EncryptionConfigurationValidator {
     private static final String DEFAULT_DEV_SALT = "default-dev-salt-change-in-prod";
 
     private static final Set<String> VALID_KMS_PROVIDERS =
-            Set.of("AWS_KMS", "AZURE_KEY_VAULT", "GCP_KMS", "VAULT");
+            Set.of("AWS_KMS", "AZURE_KEY_VAULT", "GCP_KMS", "VAULT", "LOCAL");
 
     private static final Set<String> VALID_AUDIT_LEVELS =
             Set.of("CRITICAL", "HIGH", "MEDIUM", "LOW");
@@ -125,7 +125,7 @@ public class EncryptionConfigurationValidator {
         EncryptionConfigurationProperties.Kms kms = properties.getKms();
 
         // Provider is required only when a KMS client bean is expected to be wired.
-        // If not set, the application can still start (e.g., for testing with mocks).
+        // If not set or LOCAL, the LocalDevKmsClient is used (dev/test only).
         if (kms.getProvider() != null && !kms.getProvider().isBlank()) {
             String provider = kms.getProvider().toUpperCase();
             if (!VALID_KMS_PROVIDERS.contains(provider)) {
@@ -133,44 +133,48 @@ public class EncryptionConfigurationValidator {
                         + "' is invalid. Valid values: " + VALID_KMS_PROVIDERS);
             }
 
-            // Endpoint is required when provider is set
-            if (kms.getEndpoint() == null || kms.getEndpoint().isBlank()) {
-                errors.add("pcm.encryption.kms.endpoint is required when kms.provider is set");
-            }
+            // LOCAL and VAULT providers don't use kms.endpoint
+            // (VAULT reads VAULT_ADDR from env; LOCAL is in-memory)
+            if (!"LOCAL".equals(provider) && !"VAULT".equals(provider)) {
+                // Endpoint is required when a real cloud KMS provider is set
+                if (kms.getEndpoint() == null || kms.getEndpoint().isBlank()) {
+                    errors.add("pcm.encryption.kms.endpoint is required when kms.provider is set to a real KMS");
+                }
 
-            // GCP-specific validation
-            if ("GCP_KMS".equals(provider)) {
-                if (kms.getGcpProjectId() == null || kms.getGcpProjectId().isBlank()) {
-                    errors.add("pcm.encryption.kms.gcp-project-id is required when kms.provider=GCP_KMS");
+                // GCP-specific validation
+                if ("GCP_KMS".equals(provider)) {
+                    if (kms.getGcpProjectId() == null || kms.getGcpProjectId().isBlank()) {
+                        errors.add("pcm.encryption.kms.gcp-project-id is required when kms.provider=GCP_KMS");
+                    }
+                    if (kms.getGcpLocationId() == null || kms.getGcpLocationId().isBlank()) {
+                        errors.add("pcm.encryption.kms.gcp-location-id is required when kms.provider=GCP_KMS");
+                    }
                 }
-                if (kms.getGcpLocationId() == null || kms.getGcpLocationId().isBlank()) {
-                    errors.add("pcm.encryption.kms.gcp-location-id is required when kms.provider=GCP_KMS");
-                }
-            }
 
-            // AWS-specific validation
-            if ("AWS_KMS".equals(provider)) {
-                if (kms.getRegion() == null || kms.getRegion().isBlank()) {
-                    errors.add("pcm.encryption.kms.region is required when kms.provider=AWS_KMS");
+                // AWS-specific validation
+                if ("AWS_KMS".equals(provider)) {
+                    if (kms.getRegion() == null || kms.getRegion().isBlank()) {
+                        errors.add("pcm.encryption.kms.region is required when kms.provider=AWS_KMS");
+                    }
                 }
-            }
 
-            // Certification level validation
-            if (kms.getCertification() != null && !kms.getCertification().isBlank()) {
-                if (!VALID_FIPS_LEVELS.contains(kms.getCertification().toUpperCase())) {
-                    errors.add("pcm.encryption.kms.certification '" + kms.getCertification()
-                            + "' is invalid. Valid values: " + VALID_FIPS_LEVELS);
+                // Certification level validation
+                if (kms.getCertification() != null && !kms.getCertification().isBlank()) {
+                    if (!VALID_FIPS_LEVELS.contains(kms.getCertification().toUpperCase())) {
+                        errors.add("pcm.encryption.kms.certification '" + kms.getCertification()
+                                + "' is invalid. Valid values: " + VALID_FIPS_LEVELS);
+                    }
                 }
-            }
 
-            // mTLS validation: if enabled, keystore and truststore paths are required
-            EncryptionConfigurationProperties.Kms.Mtls mtls = kms.getMtls();
-            if (mtls.isEnabled()) {
-                if (mtls.getKeystorePath() == null || mtls.getKeystorePath().isBlank()) {
-                    errors.add("pcm.encryption.kms.mtls.keystore-path is required when mtls is enabled");
-                }
-                if (mtls.getTruststorePath() == null || mtls.getTruststorePath().isBlank()) {
-                    errors.add("pcm.encryption.kms.mtls.truststore-path is required when mtls is enabled");
+                // mTLS validation: if enabled, keystore and truststore paths are required
+                EncryptionConfigurationProperties.Kms.Mtls mtls = kms.getMtls();
+                if (mtls.isEnabled()) {
+                    if (mtls.getKeystorePath() == null || mtls.getKeystorePath().isBlank()) {
+                        errors.add("pcm.encryption.kms.mtls.keystore-path is required when mtls is enabled");
+                    }
+                    if (mtls.getTruststorePath() == null || mtls.getTruststorePath().isBlank()) {
+                        errors.add("pcm.encryption.kms.mtls.truststore-path is required when mtls is enabled");
+                    }
                 }
             }
         }
@@ -256,6 +260,14 @@ public class EncryptionConfigurationValidator {
             if (DEFAULT_DEV_SALT.equals(properties.getBlindIndexGlobalSalt())) {
                 errors.add("pcm.encryption.blind-index-global-salt must be changed from the default dev value "
                         + "in " + env + " environment. Set a strong, unique secret salt.");
+            }
+
+            // A real KMS provider is mandatory in PROD/STAGING — LOCAL is dev-only
+            String provider = properties.getKms().getProvider();
+            if (provider == null || provider.isBlank() || "LOCAL".equalsIgnoreCase(provider)) {
+                errors.add("pcm.encryption.kms.provider must be set to a real KMS provider "
+                        + "(AWS_KMS, AZURE_KEY_VAULT, GCP_KMS, or VAULT) in " + env
+                        + " environment. The LOCAL in-memory provider is not allowed outside DEV.");
             }
 
             // mTLS should be enabled in production/staging

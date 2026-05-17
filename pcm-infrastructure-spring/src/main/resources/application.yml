@@ -130,7 +130,7 @@ pcm:
     kms:
       # KMS provider: AWS_KMS | AZURE_KEY_VAULT | GCP_KMS | VAULT
       # Leave unset to disable KMS integration (e.g., for local development)
-      provider: ${KMS_PROVIDER:}
+      provider: ${KMS_PROVIDER:VAULT}
 
       # KMS endpoint URL (required when provider is set)
       endpoint: ${KMS_ENDPOINT:}

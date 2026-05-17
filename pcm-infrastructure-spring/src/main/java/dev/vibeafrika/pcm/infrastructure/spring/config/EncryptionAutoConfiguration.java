@@ -367,7 +367,6 @@ public class EncryptionAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(IAuditLogger.class)
-    @ConditionalOnProperty(name = "pcm.encryption.kms.provider")
     public IAuditLogger auditLogger() {
         logger.info("Creating default AuditLogger for service: pcm-service");
         // Generate a random signing key for this session.

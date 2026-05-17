@@ -129,6 +129,12 @@
             <version>2.47.0</version>
         </dependency>
 
+        <!-- HashiCorp Vault (Transit engine KMS) -->
+        <dependency>
+            <groupId>org.springframework.vault</groupId>
+            <artifactId>spring-vault-core</artifactId>
+        </dependency>
+
         <!-- BouncyCastle: side-channel resistant cryptographic library (Req 35.7) -->
         <dependency>
             <groupId>org.bouncycastle</groupId>

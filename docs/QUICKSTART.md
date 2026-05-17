@@ -1,42 +1,35 @@
 # PCM Quick Start Guide
 
-This guide will help you get **PCM (Profile & Consent Manager)** running locally — either fully via Docker or in hybrid mode (infrastructure in Docker, app on the JVM).
+Get **PCM (Profile & Consent Manager)** running locally in two commands.
 
 ## Prerequisites
 
-- **Docker & Docker Compose v2** (required)
+- **Docker & Docker Compose v2**
 - **Java 21 + Maven 3.9+** (only for hybrid / development mode)
-- **curl or Postman** (for testing APIs)
 
 ---
 
 ## Option A — Full Docker (recommended)
 
-Everything runs in containers: the PCM application, PostgreSQL, Vault, Keycloak, and the observability stack.
-
-### 1. Configure secrets
+Everything runs in containers: PCM, PostgreSQL, Vault, Keycloak, and the observability stack.
+Vault is bootstrapped automatically — no manual setup required.
 
 ```bash
 cp .env.example .env
-# Edit .env and replace every CHANGE_ME value
-```
-
-### 2. Build & start
-
-```bash
 docker compose up --build -d
 ```
 
-The first build compiles the full Maven project inside Docker (~3-5 min). Subsequent builds are fast thanks to layer caching.
+The first build compiles the full Maven project inside Docker (~3–5 min).
+Subsequent builds are fast thanks to layer caching.
 
-### 3. Check health
+Check that everything is up:
 
 ```bash
 curl http://localhost:8080/actuator/health
 # → {"status":"UP"}
 ```
 
-### 4. Optional dev tools (pgAdmin)
+Optional dev tools (pgAdmin):
 
 ```bash
 docker compose --profile tools up -d pgadmin
@@ -47,27 +40,20 @@ docker compose --profile tools up -d pgadmin
 
 ## Option B — Hybrid (infrastructure in Docker, app on JVM)
 
-Faster iteration cycle: only the backing services run in Docker.
-
-### 1. Start infrastructure only
+Faster iteration: only the backing services run in Docker.
 
 ```bash
-docker compose up -d postgresql vault keycloak prometheus grafana jaeger otel-collector
-```
+# 1. Start infrastructure (Vault is bootstrapped automatically)
+docker compose up -d postgresql vault vault-init keycloak
 
-### 2. Build the application
-
-```bash
+# 2. Build
 ./mvnw clean install -DskipTests
-```
 
-### 3. Run the application
-
-```bash
+# 3. Run
+VAULT_ADDR=http://localhost:8200 \
+VAULT_TOKEN=pcm-dev-vault-token \
 ./mvnw spring-boot:run -pl pcm-infrastructure-spring
 ```
-
-The application starts on **port 8080**.
 
 ---
 
@@ -113,17 +99,17 @@ curl http://localhost:8080/api/v1/profiles/<profile-id>/export \
 
 ## Service URLs
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| PCM API | http://localhost:8080 | All REST endpoints |
-| Actuator health | http://localhost:8080/actuator/health | Health check |
-| Prometheus metrics | http://localhost:8080/actuator/prometheus | Raw metrics |
-| Keycloak | http://localhost:8090/auth | IAM console |
-| Vault | http://localhost:8200 | Secrets UI |
-| Prometheus | http://localhost:9090 | Metrics query |
-| Grafana | http://localhost:3000 | Dashboards |
-| Jaeger | http://localhost:16686 | Distributed traces |
-| pgAdmin | http://localhost:5050 | DB admin (tools profile) |
+| Service          | URL                                    | Description              |
+|------------------|----------------------------------------|--------------------------|
+| PCM API          | http://localhost:8080                  | All REST endpoints       |
+| Health           | http://localhost:8080/actuator/health  | Health check             |
+| Metrics          | http://localhost:8080/actuator/prometheus | Raw metrics           |
+| Keycloak         | http://localhost:8090/auth             | IAM console              |
+| Vault            | http://localhost:8200                  | Secrets UI               |
+| Prometheus       | http://localhost:9090                  | Metrics query            |
+| Grafana          | http://localhost:3000                  | Dashboards               |
+| Jaeger           | http://localhost:16686                 | Distributed traces       |
+| pgAdmin          | http://localhost:5050                  | DB admin (tools profile) |
 
 ---
 
@@ -146,16 +132,18 @@ curl http://localhost:8080/api/v1/profiles/<profile-id>/export \
 # View PCM application logs
 docker compose logs -f pcm
 
-# Restart only the app (after a code change + rebuild)
+# Rebuild and restart only the app after a code change
 docker compose up --build -d pcm
 
 # Stop everything and remove volumes (clean slate)
 docker compose down -v
 
-# Scale down to just the essentials
+# Scale down to essentials only
 docker compose stop grafana jaeger otel-collector prometheus
 ```
 
 ---
 
-> In development mode, security is relaxed for some endpoints. In production, all requests require a valid JWT issued by Keycloak. See `application-prod.yml` for the production profile.
+> **Dev vs Production** — The `.env.example` defaults are intentionally simple for local use.
+> Before deploying to staging or production, replace all passwords, set a real `BLIND_INDEX_GLOBAL_SALT`,
+> and configure a proper KMS provider. See `application-prod.yml` and `docker/vault-config-prod.hcl`.

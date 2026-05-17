@@ -225,12 +225,14 @@ class KeyRotationIntegrationTest {
         @DisplayName("Updated data after rotation is encrypted with new DEK")
         void updatedDataAfterRotation_encryptedWithNewDEK() {
             UUID kekId = UUID.randomUUID();
-            //UUID oldDEKId = initContextWithDEK(kekId);
+            UUID oldDEKId = initContextWithDEK(kekId);
 
             // Rotate DEK
             when(kmsClient.encryptDEK(any(DEK.class), eq(kekId)))
                     .thenReturn(Result.success(fakeEncryptedDEK(kekId)));
             UUID newDEKId = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
+
+            assertNotEquals(oldDEKId, newDEKId, "New DEK must differ from old DEK");
 
             // Encrypt new data after rotation
             DEK newPlainDEK = DEK.of(randomBytes(32));
@@ -269,8 +271,9 @@ class KeyRotationIntegrationTest {
 
             when(kmsClient.encryptDEK(any(DEK.class), eq(oldKEKId)))
                     .thenReturn(Result.success(fakeEncryptedDEK(oldKEKId)));
-        //     UUID dek1 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
-        //     UUID dek2 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
+            UUID dek1 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
+            UUID dek2 = keyManager.rotateDEK(CONTEXT).getValue().orElseThrow();
+            assertNotEquals(dek1, dek2, "Two DEK rotations must produce distinct DEK IDs");
 
             // Rotate KEK
             when(kmsClient.generateKEK(CONTEXT, ENV)).thenReturn(Result.success(newKEKId));

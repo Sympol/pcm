@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @SpringBootApplication(scanBasePackages = {
     "dev.vibeafrika.pcm.infrastructure.spring",
+    "dev.vibeafrika.pcm.infrastructure.encryption",
     "dev.vibeafrika.pcm.preference.infrastructure",
     "dev.vibeafrika.pcm.profile.infrastructure",
     "dev.vibeafrika.pcm.consent.infrastructure",

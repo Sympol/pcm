@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+.github
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Build artifacts (rebuilt inside Docker)
+**/target/
+**/node_modules/
+
+# Secrets — never send to Docker daemon
+.env
+.env.*
+!.env.example
+
+# Docs & assets (not needed at runtime)
+docs/
+assets/
+charts/
+*.md
+!README.md
+
+/.*
+
+# Docker files themselves (avoid recursion)
+docker-compose*.yml
+Dockerfile*
+.dockerignore

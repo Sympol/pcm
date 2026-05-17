@@ -22,8 +22,7 @@ services:
       # Encryption
       ENCRYPTION_ENVIRONMENT: ${ENCRYPTION_ENVIRONMENT:-DEV}
       BLIND_INDEX_GLOBAL_SALT: ${BLIND_INDEX_GLOBAL_SALT}
-      KMS_PROVIDER: ${KMS_PROVIDER:-}
-      KMS_ENDPOINT: ${KMS_ENDPOINT:-}
+      KMS_PROVIDER: ${KMS_PROVIDER:-VAULT}
       KMS_MTLS_ENABLED: ${KMS_MTLS_ENABLED:-false}
       AUDIT_LOG_LEVEL: ${AUDIT_LOG_LEVEL:-HIGH}
       # Observability
@@ -31,8 +30,8 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
-      vault:
-        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
       interval: 30s
@@ -88,6 +87,25 @@ services:
     networks:
       - pcm-network
     restart: unless-stopped
+
+  # ── Vault Bootstrap (one-shot init) ──────────────────────────────────────────
+  # Enables Transit + KV v2 engines and creates the PCM health-check key.
+  # Runs once and exits — pcm waits for this to complete before starting.
+  vault-init:
+    image: hashicorp/vault:1.17
+    container_name: pcm-vault-init
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN_ID}
+    volumes:
+      - ./docker/vault-init.sh:/vault-init.sh:ro
+    command: sh /vault-init.sh
+    depends_on:
+      vault:
+        condition: service_healthy
+    networks:
+      - pcm-network
+    restart: "no"
 
   # ── Keycloak (Identity & Access Management) ──────────────────────────────────
   keycloak:

@@ -29,10 +29,10 @@ jobs:
         cache: maven
 
     - name: Build with Maven
-      run: mvn -B clean install -DskipTests
+      run: ./mvnw -B clean install -DskipTests
 
     - name: Run Unit Tests
-      run: mvn -B test
+      run: ./mvnw -B test
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -61,7 +61,7 @@ jobs:
 
     - name: Run SpotBugs with Find Security Bugs
       # find-sec-bugs plugin is declared in the root pom.xml spotbugs profile
-      run: mvn -B compile spotbugs:check -Pspotbugs -DskipTests
+      run: ./mvnw -B compile spotbugs:check -Pspotbugs -DskipTests
       continue-on-error: false
 
     - name: Upload SpotBugs report
@@ -112,7 +112,7 @@ jobs:
         if [ -n "$NVD_API_KEY" ]; then
           EXTRA_ARGS="-DnvdApiKey=${NVD_API_KEY}"
         fi
-        mvn -B dependency-check:aggregate \
+        ./mvnw -B dependency-check:aggregate \
           -pl pcm-infrastructure-spring -am \
           -DfailBuildOnCVSS=7 \
           -DsuppressionFile=.github/owasp-suppressions.xml \
@@ -173,7 +173,7 @@ jobs:
         cache: maven
 
     - name: Generate CycloneDX SBOM
-      run: mvn -B cyclonedx:makeAggregateBom -DskipTests
+      run: ./mvnw -B cyclonedx:makeAggregateBom -DskipTests
 
     - name: Upload SBOM
       uses: actions/upload-artifact@v4

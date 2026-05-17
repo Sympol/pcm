@@ -27,7 +27,8 @@ nbdist/
 logs/
 
 ### Maven ###
-.mvn/
+# Ne pas ignorer le Maven Wrapper — nécessaire pour la CI
+!.mvn/
 maven-archiver/
 
 ### Testcontainers ###
@@ -41,4 +42,9 @@ docker/data/
 /.*
 !/.git/
 !/.github/
+!/.mvn/
+!.env.example
+!.dockerignore
 .idea
+.secrets
+.actrc
