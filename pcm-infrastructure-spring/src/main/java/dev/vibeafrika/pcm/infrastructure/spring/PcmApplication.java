@@ -25,13 +25,15 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
     "dev.vibeafrika.pcm.preference.infrastructure.persistence.entity",
     "dev.vibeafrika.pcm.profile.infrastructure.persistence.entity",
     "dev.vibeafrika.pcm.consent.infrastructure.persistence.entity",
-    "dev.vibeafrika.pcm.segment.infrastructure.persistence.entity"
+    "dev.vibeafrika.pcm.segment.infrastructure.persistence.entity",
+    "dev.vibeafrika.pcm.infrastructure.encryption.entity"
 })
 @EnableJpaRepositories(basePackages = {
     "dev.vibeafrika.pcm.preference.infrastructure.persistence.repository",
     "dev.vibeafrika.pcm.profile.infrastructure.persistence.repository",
     "dev.vibeafrika.pcm.consent.infrastructure.persistence.repository",
-    "dev.vibeafrika.pcm.segment.infrastructure.persistence.repository"
+    "dev.vibeafrika.pcm.segment.infrastructure.persistence.repository",
+    "dev.vibeafrika.pcm.infrastructure.encryption.repository"
 })
 public class PcmApplication {
 
