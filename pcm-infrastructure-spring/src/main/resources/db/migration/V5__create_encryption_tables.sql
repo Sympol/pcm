@@ -4,8 +4,13 @@
 -- Audit log entries signed for integrity
 
 -- IV counter state table (supports DatabaseIVCounterStorage)
+CREATE SEQUENCE IF NOT EXISTS encryption_iv_counter_state_seq
+    START WITH 1
+    INCREMENT BY 50
+    NO CYCLE;
+
 CREATE TABLE IF NOT EXISTS encryption_iv_counter_state (
-    id              BIGSERIAL PRIMARY KEY,
+    id              BIGINT      NOT NULL DEFAULT nextval('encryption_iv_counter_state_seq') PRIMARY KEY,
     dek_id          UUID        NOT NULL UNIQUE,
     random_base     BIGINT      NOT NULL,
     counter         INTEGER     NOT NULL,

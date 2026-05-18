@@ -349,6 +349,7 @@ class EncryptionConfigurationIntegrationTest {
             EncryptionConfigurationProperties props = devDefaults();
             props.setEnvironment("PROD");
             props.setBlindIndexGlobalSalt("strong-unique-prod-salt-value-here");
+            props.getKms().setProvider("VAULT");
 
             // Should not throw
             validatorFor(props).validate();
