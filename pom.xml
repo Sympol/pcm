@@ -49,7 +49,7 @@
         <redis.version>3.2.1</redis.version>
 
         <!-- Security & Vault -->
-        <bouncycastle.version>1.78</bouncycastle.version>
+        <bouncycastle.version>1.84</bouncycastle.version>
 
         <!-- gRPC -->
         <grpc.version>1.60.1</grpc.version>
@@ -192,6 +192,13 @@
                 <version>3.1.1</version>
             </dependency>
 
+            <!-- Bouncy Castle -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
             <!-- gRPC -->
             <dependency>
                 <groupId>io.grpc</groupId>
@@ -289,7 +296,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.8.0</version>
+                <version>1.8.1</version>
             </dependency>
 
             <!-- Forced Transitive Dependency Upgrades (Security) -->
