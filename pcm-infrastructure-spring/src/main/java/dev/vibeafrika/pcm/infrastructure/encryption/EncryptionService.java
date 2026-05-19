@@ -615,7 +615,7 @@ public class EncryptionService implements IEncryptionService {
             .serviceIdentity(SERVICE_IDENTITY)
             .keyId(keyId)
             .success(true)
-            .metadata(count > 1 ? java.util.Map.of("batchSize", count) : java.util.Map.of())
+            .metadata(count > 1 ? Map.of("batchSize", count) : Map.of())
             .build();
         
         auditLogger.logEncryption(event);
@@ -654,7 +654,7 @@ public class EncryptionService implements IEncryptionService {
             .serviceIdentity(SERVICE_IDENTITY)
             .keyId(keyId)
             .success(true)
-            .metadata(count > 1 ? java.util.Map.of("batchSize", count) : java.util.Map.of())
+            .metadata(count > 1 ? Map.of("batchSize", count) : Map.of())
             .build();
         
         auditLogger.logDecryption(event);

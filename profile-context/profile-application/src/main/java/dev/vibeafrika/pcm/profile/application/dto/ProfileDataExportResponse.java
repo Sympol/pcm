@@ -2,6 +2,7 @@ package dev.vibeafrika.pcm.profile.application.dto;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 /**
  * Response DTO for the data portability export.
@@ -33,16 +34,23 @@ public record ProfileDataExportResponse(
         List<PreferenceExportEntry> preferences
 
 ) {
+    public ProfileDataExportResponse {
+        consents = consents != null ? List.copyOf(consents) : List.of();
+        preferences = preferences != null ? List.copyOf(preferences) : List.of();
+    }
 
     /**
      * Profile identity data included in the export.
      */
     public record ProfileSection(
-            String handle,
-            java.util.Map<String, Object> attributes,
+            String handle, Map<String, Object> attributes,
             String createdAt,
             String updatedAt
-    ) {}
+    ) {
+        public ProfileSection {
+            attributes = attributes != null ? Map.copyOf(attributes) : Map.of();
+        }
+    }
 
     /**
      * A single consent record included in the export.
@@ -56,7 +64,11 @@ public record ProfileDataExportResponse(
             String createdAt,
             String updatedAt,
             List<ConsentEventEntry> history
-    ) {}
+    ) {
+        public ConsentExportEntry {
+            history = history != null ? List.copyOf(history) : List.of();
+        }
+    }
 
     /**
      * A single event in the consent history ledger.
@@ -71,8 +83,12 @@ public record ProfileDataExportResponse(
      */
     public record PreferenceExportEntry(
             UUID preferenceId,
-            java.util.Map<String, String> settings,
+            Map<String, String> settings,
             String createdAt,
             String updatedAt
-    ) {}
+    ) {
+        public PreferenceExportEntry {
+            settings = settings != null ? Map.copyOf(settings) : Map.of();
+        }
+    }
 }

@@ -37,7 +37,7 @@ public final class SegmentCriteria {
      * Create tag-based criteria.
      */
     public static SegmentCriteria tagBased(String tag) {
-        Assert.field("tag", tag).notBlank().value();
+        Assert.field("tag", tag).notBlank();
         return new SegmentCriteria("TAG", Map.of("tag", tag));
     }
 
@@ -45,7 +45,7 @@ public final class SegmentCriteria {
      * Create score-based criteria.
      */
     public static SegmentCriteria scoreBased(String scoreKey, double minValue, double maxValue) {
-        Assert.field("scoreKey", scoreKey).notBlank().value();
+        Assert.field("scoreKey", scoreKey).notBlank();
         
         // Validate score ranges manually
         if (minValue < 0.0 || minValue > 1.0) {
@@ -69,7 +69,7 @@ public final class SegmentCriteria {
      * Create attribute-based criteria.
      */
     public static SegmentCriteria attributeBased(String attributeKey, Object attributeValue) {
-        Assert.field("attributeKey", attributeKey).notBlank().value();
+        Assert.field("attributeKey", attributeKey).notBlank();
         
         // Validate attribute value is not null
         if (attributeValue == null) {

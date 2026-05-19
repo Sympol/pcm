@@ -21,5 +21,6 @@ public record CreatePreferenceRequest(
         if (settings == null) {
             throw new IllegalArgumentException("Settings cannot be null");
         }
+        settings = Map.copyOf(settings);
     }
 }

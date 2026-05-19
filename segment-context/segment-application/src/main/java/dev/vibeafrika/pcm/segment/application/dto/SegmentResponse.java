@@ -19,6 +19,11 @@ public record SegmentResponse(
     Map<String, Double> scores,
     Instant lastUpdated
 ) {
+    public SegmentResponse {
+        tags = tags != null ? Set.copyOf(tags) : Set.of();
+        scores = scores != null ? Map.copyOf(scores) : Map.of();
+    }
+
     /**
      * Factory method to create a SegmentResponse from a domain Segment entity.
      */

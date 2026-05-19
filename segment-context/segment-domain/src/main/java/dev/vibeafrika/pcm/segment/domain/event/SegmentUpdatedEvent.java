@@ -19,6 +19,11 @@ public record SegmentUpdatedEvent(
     Map<String, Double> scores,
     Instant occurredAt
 ) {
+    public SegmentUpdatedEvent {
+        tags = tags != null ? Set.copyOf(tags) : Set.of();
+        scores = scores != null ? Map.copyOf(scores) : Map.of();
+    }
+
     public static SegmentUpdatedEvent of(
         SegmentId segmentId,
         ProfileId profileId,

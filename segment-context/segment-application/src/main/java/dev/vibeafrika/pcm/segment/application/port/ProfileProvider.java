@@ -24,5 +24,9 @@ public interface ProfileProvider {
         UUID profileId,
         String handle,
         Map<String, Object> attributes
-    ) {}
+    ) {
+        public ProfileSnapshot {
+            attributes = attributes != null ? Map.copyOf(attributes) : Map.of();
+        }
+    }
 }

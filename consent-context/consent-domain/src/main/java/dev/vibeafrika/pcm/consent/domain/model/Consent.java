@@ -12,7 +12,7 @@ import java.util.List;
  * No framework annotations, no persistence concerns.
  * Consents are append-only - revocation creates a new event rather than modifying existing data.
  */
-public class Consent {
+public final class Consent {
     private final ConsentId id;
     private final ProfileId profileId;
     private final TenantId tenantId;

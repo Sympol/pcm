@@ -12,6 +12,10 @@ import java.util.stream.Collectors;
 public record ConsentHistoryResponse(
     List<ConsentEventDto> events
 ) {
+    public ConsentHistoryResponse {
+        events = events != null ? List.copyOf(events) : List.of();
+    }
+
     public static ConsentHistoryResponse from(Consent consent) {
         List<ConsentEventDto> eventDtos = consent.getHistory().stream()
             .map(event -> new ConsentEventDto(

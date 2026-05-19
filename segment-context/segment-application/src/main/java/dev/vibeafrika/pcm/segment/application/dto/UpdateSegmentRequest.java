@@ -14,5 +14,7 @@ public record UpdateSegmentRequest(
     Map<String, Double> scores
 ) {
     public UpdateSegmentRequest {
+        tags = tags != null ? Set.copyOf(tags) : Set.of();
+        scores = scores != null ? Map.copyOf(scores) : Map.of();
     }
 }

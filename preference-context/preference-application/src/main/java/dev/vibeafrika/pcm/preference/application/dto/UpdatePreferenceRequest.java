@@ -21,5 +21,6 @@ public record UpdatePreferenceRequest(
         if (settings == null || settings.isEmpty()) {
             throw new IllegalArgumentException("Settings cannot be null or empty");
         }
+        settings = Map.copyOf(settings);
     }
 }

@@ -13,7 +13,7 @@ import java.util.Objects;
  * Represents user UX settings and preferences.
  * No framework annotations, no persistence concerns.
  */
-public class Preference {
+public final class Preference {
     private final PreferenceId id;
     private final TenantId tenantId;
     private final ProfileId profileId;

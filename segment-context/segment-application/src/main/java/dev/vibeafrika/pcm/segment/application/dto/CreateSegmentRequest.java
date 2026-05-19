@@ -18,5 +18,7 @@ public record CreateSegmentRequest(
         if (profileId == null) {
             throw new IllegalArgumentException("Profile ID is required");
         }
+        tags = tags != null ? Set.copyOf(tags) : Set.of();
+        scores = scores != null ? Map.copyOf(scores) : Map.of();
     }
 }

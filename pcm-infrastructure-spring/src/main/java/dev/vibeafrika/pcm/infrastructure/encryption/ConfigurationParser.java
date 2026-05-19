@@ -105,7 +105,7 @@ public class ConfigurationParser {
                     "NULL_INPUT", "InputStream must not be null"));
         }
         try {
-            String content = new String(inputStream.readAllBytes());
+            String content = new String(inputStream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             return parseAutoDetect(content);
         } catch (IOException e) {
             return Result.failure(ConfigurationError.of(

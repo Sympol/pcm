@@ -23,6 +23,6 @@ public record UpdateProfileRequest(
         if (tenantId == null || tenantId.isBlank()) {
             throw new IllegalArgumentException("Tenant ID is required");
         }
-        // attributes can be null or empty
+        attributes = attributes != null ? Map.copyOf(attributes) : Map.of();
     }
 }

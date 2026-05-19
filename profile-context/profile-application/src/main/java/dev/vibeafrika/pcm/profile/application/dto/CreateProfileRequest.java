@@ -22,6 +22,6 @@ public record CreateProfileRequest(
         if (handle == null || handle.isBlank()) {
             throw new IllegalArgumentException("Handle is required");
         }
-        // attributes can be null or empty
+        attributes = attributes != null ? Map.copyOf(attributes) : Map.of();
     }
 }

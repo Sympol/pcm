@@ -68,7 +68,7 @@ public class RestoreService implements IRestoreService {
             }
 
             // Use a deterministic backup ID based on the timestamp for the restore point
-            UUID backupId = UUID.nameUUIDFromBytes(targetTimestamp.toString().getBytes());
+            UUID backupId = UUID.nameUUIDFromBytes(targetTimestamp.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             UUID restorePointId = UUID.randomUUID();
 
             RestorePoint restorePoint = RestorePoint.of(

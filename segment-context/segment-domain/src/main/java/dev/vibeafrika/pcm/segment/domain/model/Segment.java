@@ -9,7 +9,7 @@ import java.util.*;
  * Segment aggregate root - pure domain model.
  * Represents a user's classification and behavioral scores.
  */
-public class Segment {
+public final class Segment {
     private final SegmentId id;
     private final TenantId tenantId;
     private final ProfileId profileId;

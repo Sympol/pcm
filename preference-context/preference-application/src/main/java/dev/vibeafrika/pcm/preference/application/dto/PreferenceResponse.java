@@ -16,6 +16,10 @@ public record PreferenceResponse(
     Map<String, String> settings,
     Instant lastUpdated
 ) {
+    public PreferenceResponse {
+        settings = settings != null ? Map.copyOf(settings) : Map.of();
+    }
+
     /**
      * Factory method to create a PreferenceResponse from a domain Preference entity.
      */

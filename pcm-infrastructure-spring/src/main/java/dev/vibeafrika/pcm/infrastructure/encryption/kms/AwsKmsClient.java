@@ -40,6 +40,7 @@ import java.security.KeyStore;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.Map;
 
 /**
  * AWS KMS implementation of {@link IKMSClient}.
@@ -367,7 +368,7 @@ public class AwsKmsClient implements IKMSClient {
                 software.amazon.awssdk.services.kms.model.EncryptRequest.builder()
                     .keyId(kekId.toString())
                     .plaintext(plaintext)
-                    .encryptionContext(java.util.Map.of("secretId", secretId.toString()))
+                    .encryptionContext(Map.of("secretId", secretId.toString()))
                     .build();
             kmsClient.encrypt(request);
             logger.debug("Secret stored in AWS KMS: secretId={}", secretId);

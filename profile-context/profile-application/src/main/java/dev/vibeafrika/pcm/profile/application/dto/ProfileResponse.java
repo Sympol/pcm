@@ -19,6 +19,10 @@ public record ProfileResponse(
     String updatedAt,
     Long version
 ) {
+    public ProfileResponse {
+        attributes = attributes != null ? Map.copyOf(attributes) : Map.of();
+    }
+
     /**
      * Factory method to create ProfileResponse from domain Profile entity.
      * 
