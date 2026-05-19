@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * Value Object representing a Tenant ID for multi-tenancy support.
  */
-public class TenantId implements ValueObject {
+public final class TenantId implements ValueObject {
     
     private final String value;
     

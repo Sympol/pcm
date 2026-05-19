@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.function.Predicate;
 
-public class Validation {
+public final class Validation {
 
     private Validation() {
         throw new AssertionError("Cette classe ne peut pas être instanciée.");
