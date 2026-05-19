@@ -14,7 +14,7 @@ class LocalAesPiiProtectionProviderTest {
         String original = "sensitive data";
 
         String encrypted = provider.encrypt(original);
-        assertThat(encrypted).startsWith("local:v1:");
+        assertThat(encrypted).startsWith("local:v2:");
         assertThat(encrypted).isNotEqualTo(original);
 
         String decrypted = provider.decrypt(encrypted);
