@@ -98,4 +98,5 @@ ENTRYPOINT ["java", \
   "-XX:MaxRAMPercentage=75.0", \
   "-XX:+UseG1GC", \
   "-Djava.security.egd=file:/dev/./urandom", \
+  "-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=", \
   "-jar", "app.jar"]
